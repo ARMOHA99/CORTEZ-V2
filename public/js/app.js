@@ -279,8 +279,9 @@ function loadViews() {
 }
 
 window.addEventListener('cortez:unauthorized', () => {
+  const wasAuthenticated = state.authenticated;
   reset();
-  window.location.href = '/';
+  if (wasAuthenticated) window.location.href = '/';
 });
 
 boot();
