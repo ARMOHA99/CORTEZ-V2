@@ -1,0 +1,73 @@
+services:
+  - type: web
+    name: cortez-platform
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: Asia/Riyadh
+      - key: BASE_URL
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      - key: DISCORD_REDIRECT_URI
+        sync: false
+      - key: DISCORD_INVITE_URL
+        sync: false
+      - key: DISCORD_OWNER_IDS
+        sync: false
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: BOT_ENABLED
+        value: "true"
+      - key: ROLE_OWNER
+        sync: false
+      - key: ROLE_OPERATIONS
+        sync: false
+      - key: ROLE_BUSINESS
+        sync: false
+      - key: ROLE_MEMBER
+        sync: false
+      - key: ROLE_STORE
+        sync: false
+      - key: ROLE_WARNING
+        sync: false
+      - key: ROLE_FINE
+        sync: false
+      - key: ROLE_BANNED
+        sync: false
+      - key: CHANNEL_ANNOUNCEMENTS
+        sync: false
+      - key: CHANNEL_OPERATIONS
+        sync: false
+      - key: CHANNEL_DISCIPLINE
+        sync: false
+      - key: CHANNEL_VOTES
+        sync: false
+      - key: CHANNEL_ORDERS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: WEEK_START_DAY
+        value: "6"
+      - key: DEV_LOGIN
+        value: "false"
