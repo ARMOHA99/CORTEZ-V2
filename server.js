@@ -51,6 +51,7 @@ async function buildApp() {
       etag: true,
       setHeaders(res, filePath) {
         if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
+        else if (/\.(js|css)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
       }
     })
   );
