@@ -114,9 +114,13 @@ async function fetchOAuthGuilds(accessToken) {
 function normalizeMember(member) {
   if (!member) return null;
   const user = member.user || member;
+  // REST يرجع مصفوفة أرقام، أما discord.js فيرجع RoleManager (roles.cache) — ندعم الحالتين
+  let roleIds = [];
+  if (Array.isArray(member.roles)) roleIds = member.roles.map(String);
+  else if (member.roles && member.roles.cache) roleIds = Array.from(member.roles.cache.keys()).map(String);
   return {
     inGuild: true,
-    roles: Array.isArray(member.roles) ? member.roles.map(String) : [],
+    roles: roleIds,
     nick: member.nick || null,
     joinedAt: member.joined_at || member.joinedAt || null,
     user: {
@@ -486,6 +490,7 @@ module.exports = {
   syncRankRole,
   addWarningRole,
   removeWarningRole,
+  normalizeMember,
   sendChannel,
   resolveChannelId,
   listGuildRoles,

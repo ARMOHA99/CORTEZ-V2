@@ -123,7 +123,7 @@ router.get(
       if (existing) {
         await User.updateOne({ _id: existing._id }, { $set: { rank: 'guest', sessionInvalid: true } });
       }
-      return res.redirect('/?error=no_role');
+      return res.redirect('/?error=no_role&seen=' + (member ? (member.roles || []).length : 'x'));
     }
 
     const displayName =

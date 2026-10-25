@@ -34,10 +34,25 @@ function localUpload(buffer, originalName) {
   return `/uploads/${name}`;
 }
 
-async function cloudinaryUpload(buffer) {
+function mongoReady() {
+  return require('mongoose').connection.readyState === 1;
+}
+
+async function databaseUpload(buffer, mimetype, originalName) {
+  const Upload = require('../models/Upload');
+  const doc = await Upload.create({
+    name: String(originalName || '').slice(0, 160),
+    contentType: mimetype,
+    size: buffer.length,
+    data: buffer
+  });
+  return `/api/upload/file/${doc._id}`;
+}
+
+async function cloudinaryUpload(buffer, cloudNameOverride) {
   const cloudinary = require('cloudinary').v2;
   cloudinary.config({
-    cloud_name: config.cloudinary.cloudName,
+    cloud_name: cloudNameOverride || config.cloudinary.cloudName,
     api_key: config.cloudinary.apiKey,
     api_secret: config.cloudinary.apiSecret
   });
@@ -53,6 +68,21 @@ async function cloudinaryUpload(buffer) {
   });
 }
 
+router.get(
+  '/file/:id',
+  asyncHandler(async (req, res) => {
+    if (!/^[a-f0-9]{24}$/i.test(String(req.params.id))) throw httpError(404, 'غير موجود', 'NOT_FOUND');
+    if (!mongoReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    const Upload = require('../models/Upload');
+    const doc = await Upload.findById(req.params.id).lean();
+    if (!doc) throw httpError(404, 'الصورة غير موجودة', 'NOT_FOUND');
+    res.set('Content-Type', doc.contentType);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('X-Content-Type-Options', 'nosniff');
+    return res.send(doc.data.buffer ? Buffer.from(doc.data.buffer) : doc.data);
+  })
+);
+
 router.post(
   '/',
   requireAuth,
@@ -61,23 +91,38 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!req.file) throw httpError(400, 'لم يتم إرسال صورة', 'NO_FILE');
     let url = '';
-    let provider = 'local';
+    let provider = 'database';
     let note = '';
     if (cloudinaryConfigured) {
-      try {
-        url = await cloudinaryUpload(req.file.buffer);
-        provider = 'cloudinary';
-      } catch (error) {
-        const reason = String((error && (error.message || (error.error && error.error.message))) || error || 'سبب غير معروف').slice(0, 180);
-        console.error('[Upload] Cloudinary فشل:', reason);
-        note = `فشل رفع Cloudinary (${reason}) — تم حفظ الصورة محلياً بدلاً منه. راجع CLOUDINARY_CLOUD_NAME والمفاتيح.`;
+      const attempts = [config.cloudinary.cloudName];
+      const lower = String(config.cloudinary.cloudName).toLowerCase();
+      if (lower !== config.cloudinary.cloudName) attempts.push(lower);
+      let lastReason = '';
+      for (const cloudName of attempts) {
+        try {
+          url = await cloudinaryUpload(req.file.buffer, cloudName);
+          provider = 'cloudinary';
+          break;
+        } catch (error) {
+          lastReason = String((error && (error.message || (error.error && error.error.message))) || error || 'سبب غير معروف').slice(0, 180);
+          console.error('[Upload] Cloudinary فشل:', lastReason);
+        }
       }
-    } else {
-      note = 'Cloudinary غير مهيأ — تم الحفظ محلياً (قد يُفقد عند إعادة نشر Render).';
+      if (!url) note = `تعذّر الرفع إلى Cloudinary (${lastReason}) فحُفظت الصورة في قاعدة البيانات بدلاً منه، وهي دائمة.`;
+    }
+    if (!url && mongoReady()) {
+      try {
+        url = await databaseUpload(req.file.buffer, req.file.mimetype, req.file.originalname);
+        provider = 'database';
+      } catch (error) {
+        console.error('[Upload] قاعدة البيانات فشلت:', error.message);
+      }
     }
     if (!url) {
       try {
         url = localUpload(req.file.buffer, req.file.originalname);
+        provider = 'local';
+        note = note || 'تم الحفظ على القرص المحلي فقط (قد تُفقد الصورة عند إعادة نشر Render).';
       } catch (error) {
         console.error('[Upload] الحفظ المحلي فشل:', error.message);
         throw httpError(500, 'تعذّر حفظ الصورة على السيرفر: ' + error.message, 'UPLOAD_FAILED');
