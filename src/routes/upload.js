@@ -60,20 +60,30 @@ router.post(
   upload.single('image'),
   asyncHandler(async (req, res) => {
     if (!req.file) throw httpError(400, 'لم يتم إرسال صورة', 'NO_FILE');
-    let url;
+    let url = '';
+    let provider = 'local';
+    let note = '';
     if (cloudinaryConfigured) {
-      url = await cloudinaryUpload(req.file.buffer);
+      try {
+        url = await cloudinaryUpload(req.file.buffer);
+        provider = 'cloudinary';
+      } catch (error) {
+        const reason = String((error && (error.message || (error.error && error.error.message))) || error || 'سبب غير معروف').slice(0, 180);
+        console.error('[Upload] Cloudinary فشل:', reason);
+        note = `فشل رفع Cloudinary (${reason}) — تم حفظ الصورة محلياً بدلاً منه. راجع CLOUDINARY_CLOUD_NAME والمفاتيح.`;
+      }
     } else {
-      url = localUpload(req.file.buffer, req.file.originalname);
+      note = 'Cloudinary غير مهيأ — تم الحفظ محلياً (قد يُفقد عند إعادة نشر Render).';
     }
-    res.status(201).json({
-      ok: true,
-      url,
-      provider: cloudinaryConfigured ? 'cloudinary' : 'local',
-      note: cloudinaryConfigured
-        ? ''
-        : 'Cloudinary غير مهيأ — تم الحفظ محلياً (قد يُفقد عند إعادة نشر Render).'
-    });
+    if (!url) {
+      try {
+        url = localUpload(req.file.buffer, req.file.originalname);
+      } catch (error) {
+        console.error('[Upload] الحفظ المحلي فشل:', error.message);
+        throw httpError(500, 'تعذّر حفظ الصورة على السيرفر: ' + error.message, 'UPLOAD_FAILED');
+      }
+    }
+    res.status(201).json({ ok: true, url, provider, note });
   })
 );
 

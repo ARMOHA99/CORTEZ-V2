@@ -8,6 +8,15 @@
 
 require('dotenv').config();
 
+/* يقرأ أول متغير بيئة له قيمة من عدّة أسماء مقبولة */
+function envFirst(...names) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value && String(value).trim()) return String(value).trim();
+  }
+  return '';
+}
+
 const config = {
   /* ───────────────────────────── هوية المنظمة ───────────────────────────── */
   org: {
@@ -60,23 +69,23 @@ const config = {
       .filter(Boolean),
     /* معرّفات رتب ديسكورد المستخدمة للمزامنة التلقائية */
     roles: {
-      owner: process.env.ROLE_OWNER || '',
-      operations: process.env.ROLE_OPERATIONS || '',
-      business: process.env.ROLE_BUSINESS || '',
-      member: process.env.ROLE_MEMBER || '',
-      store: process.env.ROLE_STORE || '',
-      warning: process.env.ROLE_WARNING || '',
-      fine: process.env.ROLE_FINE || '',
-      banned: process.env.ROLE_BANNED || ''
+      owner: envFirst('ROLE_OWNER', 'ROLE_ADMIN_ID', 'ROLE_ADMIN', 'ROLE_OWNER_ID'),
+      operations: envFirst('ROLE_OPERATIONS', 'ROLE_OPS_ID', 'ROLE_OPS', 'ROLE_OPERATIONS_ID'),
+      business: envFirst('ROLE_BUSINESS', 'ROLE_BUSINESS_ID', 'ROLE_BIZ_ID', 'ROLE_BIZ'),
+      member: envFirst('ROLE_MEMBER', 'ROLE_MEMBER_ID'),
+      store: envFirst('ROLE_STORE', 'ROLE_SHOP_ID', 'ROLE_SHOP', 'ROLE_STORE_ID'),
+      warning: envFirst('ROLE_WARNING', 'ROLE_WARNING_ID', 'ROLE_WARN_ID'),
+      fine: envFirst('ROLE_FINE', 'ROLE_FINE_ID'),
+      banned: envFirst('ROLE_BANNED', 'ROLE_BANNED_ID', 'ROLE_BAN_ID')
     },
     /* معرّفات الرومات المستخدمة من البوت */
     channels: {
-      announcements: process.env.CHANNEL_ANNOUNCEMENTS || '',
-      operations: process.env.CHANNEL_OPERATIONS || '',
-      discipline: process.env.CHANNEL_DISCIPLINE || '',
-      votes: process.env.CHANNEL_VOTES || '',
-      orders: process.env.CHANNEL_ORDERS || '',
-      audit: process.env.CHANNEL_AUDIT || ''
+      announcements: envFirst('CHANNEL_ANNOUNCEMENTS', 'CHANNEL_ANNOUNCEMENTS_ID', 'ANNOUNCEMENTS_CHANNEL_ID'),
+      operations: envFirst('CHANNEL_OPERATIONS', 'CHANNEL_OPERATIONS_ID', 'OPERATIONS_CHANNEL_ID', 'CHANNEL_OPS_ID'),
+      discipline: envFirst('CHANNEL_DISCIPLINE', 'CHANNEL_DISCIPLINE_ID', 'DISCIPLINE_CHANNEL_ID'),
+      votes: envFirst('CHANNEL_VOTES', 'CHANNEL_VOTES_ID', 'VOTES_CHANNEL_ID'),
+      orders: envFirst('CHANNEL_ORDERS', 'CHANNEL_ORDERS_ID', 'ORDERS_CHANNEL_ID', 'CHANNEL_SHOP_ID'),
+      audit: envFirst('CHANNEL_AUDIT', 'CHANNEL_AUDIT_ID', 'AUDIT_CHANNEL_ID')
     }
   },
 

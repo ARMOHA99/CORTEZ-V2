@@ -38,6 +38,25 @@ let currentTab = 'overview';
 let memberSearch = '';
 let memberPage = 1;
 
+/* يصغّر الصور الكبيرة قبل الرفع حتى لا تتجاوز الحد المسموح */
+async function shrinkImage(file) {
+  try {
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type) || file.size < 900 * 1024) return file;
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.88));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, type === 'image/png' ? '.png' : '.jpg'), { type });
+  } catch (error) {
+    return file;
+  }
+}
+
 const idOf = (item) => String((item && (item._id || item.id)) || '');
 const errBox = (e) => `<div class="card"><div class="card-body"><h3>خطأ</h3><p class="muted">${esc(e.message || 'حدث خطأ')}</p></div></div>`;
 const loading = '<div class="view-loading"><div class="loader-ring"></div></div>';
@@ -163,9 +182,10 @@ async function tabSettings(box) {
   urlInput.addEventListener('input', setPrev);
   box.querySelector('#logo-clear').addEventListener('click', () => { urlInput.value = ''; setPrev(); });
   box.querySelector('#logo-file').addEventListener('change', async (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
+    const picked = event.target.files && event.target.files[0];
+    if (!picked) return;
     try {
+      const file = await shrinkImage(picked);
       const res = await upload(file);
       urlInput.value = res.url;
       setPrev();
@@ -478,9 +498,9 @@ function openProductModal(product, reload) {
   if (!modal) return;
   const form = modal.el.querySelector('#prod-form');
   modal.el.querySelector('#prod-file').addEventListener('change', async (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    try { const res = await upload(file); form.image.value = res.url; toast('تم رفع الصورة', 'success'); } catch (e) { toast(e.message, 'danger'); }
+    const picked = event.target.files && event.target.files[0];
+    if (!picked) return;
+    try { const file = await shrinkImage(picked); const res = await upload(file); form.image.value = res.url; toast(res.note || 'تم رفع الصورة', res.note ? 'warning' : 'success'); } catch (e) { toast(e.message, 'danger'); }
   });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();

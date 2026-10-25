@@ -62,14 +62,23 @@ function toCsv(rows, headers) {
 
 function jsonErrorHandler(error, req, res, next) {
   if (res.headersSent) return next(error);
-  const status = error.status || error.statusCode || 500;
+  let status = error.status || error.statusCode || 500;
+  let publicMessage = null;
+  if (error && error.name === 'MulterError') {
+    status = 400;
+    publicMessage =
+      error.code === 'LIMIT_FILE_SIZE'
+        ? 'حجم الصورة أكبر من الحد المسموح. صغّر الصورة أو اختر صورة أخف.'
+        : 'تعذّر رفع الملف: ' + error.message;
+  }
   if (status >= 500) {
     console.error('[Server]', error.stack || error.message);
   }
   const isApi = req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/auth');
   if (isApi) {
+    const exposeMessage = status < 500 || error.code === 'UPLOAD_FAILED';
     return res.status(status).json({
-      error: status >= 500 ? 'حدث خطأ داخلي في الخادم' : error.message,
+      error: publicMessage || (exposeMessage ? error.message : 'حدث خطأ داخلي في الخادم'),
       code: error.code || 'ERROR'
     });
   }

@@ -135,9 +135,10 @@ async function getGuildMember(discordId) {
   if (isReady()) {
     try {
       const guild = client.guilds.cache.get(config.discord.guildId);
-      if (!guild) return null;
-      const member = await guild.members.fetch({ user: discordId, force: true });
-      return normalizeMember(member);
+      if (guild) {
+        const member = await guild.members.fetch({ user: discordId, force: true });
+        return normalizeMember(member);
+      }
     } catch (error) {
       if (error.code === 10007 || error.status === 404) return null;
       console.error('[Discord] fetch member:', error.message);

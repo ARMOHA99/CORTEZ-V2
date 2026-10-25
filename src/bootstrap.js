@@ -141,7 +141,10 @@ async function seedRanks() {
   };
   for (const [key, roleId] of Object.entries(roleMap)) {
     if (roleId) {
-      await Rank.updateOne({ key }, { $set: { discordRoleId: roleId } });
+      await Rank.updateOne(
+        { key, $or: [{ discordRoleId: '' }, { discordRoleId: { $exists: false } }, { discordRoleId: null }] },
+        { $set: { discordRoleId: roleId } }
+      );
     }
   }
 }
