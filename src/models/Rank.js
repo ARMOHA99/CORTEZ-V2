@@ -10,6 +10,7 @@ const rankSchema = new mongoose.Schema(
     icon: { type: String, default: '◆', maxlength: 8 },
     permissions: { type: [String], default: [] },
     discordRoleId: { type: String, default: '' },
+    discordRoleName: { type: String, default: '', maxlength: 100 },
     isSystem: { type: Boolean, default: false },
     order: { type: Number, default: 100 },
     description: { type: String, default: '', maxlength: 300 }

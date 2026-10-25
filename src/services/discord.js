@@ -1,4 +1,5 @@
 const config = require('../../config');
+const settingsService = require('./settings');
 
 let client = null;
 
@@ -229,8 +230,66 @@ async function removeWarningRole(discordId, roleId) {
   return removeRole(discordId, roleId);
 }
 
+const CHANNEL_SETTINGS = {
+  orders: 'discord.channel.orders',
+  internalOrders: 'discord.channel.internalOrders',
+  operations: 'discord.channel.operations'
+};
+
+async function resolveChannelId(channelKey) {
+  let fromSettings = '';
+  if (CHANNEL_SETTINGS[channelKey]) {
+    try {
+      fromSettings = String((await settingsService.get(CHANNEL_SETTINGS[channelKey], '')) || '').trim();
+    } catch (error) {
+      fromSettings = '';
+    }
+  }
+  const fromEnv = config.discord.channels[channelKey] || '';
+  const fallback = channelKey === 'internalOrders' ? config.discord.channels.orders || '' : '';
+  return fromSettings || fromEnv || fallback;
+}
+
+let lastBotError = '';
+
+function setBotError(message) {
+  lastBotError = String(message || '');
+}
+
+async function listGuildRoles() {
+  if (!hasBot() || !config.discord.guildId) return [];
+  const roles = await rest(`/guilds/${config.discord.guildId}/roles`);
+  return (Array.isArray(roles) ? roles : [])
+    .filter((role) => role.id !== config.discord.guildId && !role.managed)
+    .sort((a, b) => b.position - a.position)
+    .map((role) => ({ id: role.id, name: role.name, color: role.color ? '#' + role.color.toString(16).padStart(6, '0') : '' }));
+}
+
+async function getBotStatus() {
+  const status = {
+    tokenSet: Boolean(config.bot.token),
+    enabled: Boolean(config.bot.enabled),
+    ready: isReady(),
+    tag: client && client.user ? client.user.tag : '',
+    guildIdSet: Boolean(config.discord.guildId),
+    guildFound: false,
+    guildName: '',
+    lastError: lastBotError,
+    channels: {}
+  };
+  if (client && isReady() && config.discord.guildId) {
+    const guild = await client.guilds.fetch(config.discord.guildId).catch(() => null);
+    status.guildFound = Boolean(guild);
+    status.guildName = guild ? guild.name : '';
+  }
+  for (const key of ['orders', 'internalOrders', 'operations']) {
+    status.channels[key] = Boolean(await resolveChannelId(key));
+  }
+  return status;
+}
+
 async function sendChannel(channelKey, payload) {
-  const channelId = config.discord.channels[channelKey];
+  const channelId = await resolveChannelId(channelKey);
   if (!channelId) return null;
   try {
     if (isReady()) {
@@ -327,6 +386,14 @@ async function notifyOperation(operation) {
         win ? 0x2ecc71 : 0xe63946,
         [
           { name: 'النتيجة', value: win ? 'فوز' : 'خسارة', inline: true },
+          {
+            name: win ? 'المبلغ الداخل' : 'المبلغ المخسور',
+            value: `${win ? '+' : '−'}${Number(operation.money || 0).toLocaleString('en-US')} ${config.system.currencyLabel}`,
+            inline: true
+          },
+          { name: 'قيمة الغنائم', value: `${Number(operation.lootValue || 0).toLocaleString('en-US')} ${config.system.currencyLabel}`, inline: true },
+          { name: 'قيمة المفقودات', value: `${Number(operation.lostValue || 0).toLocaleString('en-US')} ${config.system.currencyLabel}`, inline: true },
+          { name: 'الصافي', value: `${Number(operation.netValue || 0).toLocaleString('en-US')} ${config.system.currencyLabel}`, inline: true },
           { name: 'الغنائم', value: String((operation.looted || []).length), inline: true },
           { name: 'المفقودات', value: String((operation.lost || []).length), inline: true },
           { name: 'المشاركون', value: (operation.participantNames || []).join(' • ') || '—', inline: false }
@@ -340,14 +407,22 @@ async function notifyOperation(operation) {
 
 async function notifyOrder(order) {
   if (!order) return false;
+  try {
+    if ((await settingsService.get('system.ordersDiscordNotify', true)) === false) return false;
+  } catch (error) {
+    /* ignore */
+  }
+  const internal = order.type === 'internal';
   const items = (order.items || [])
     .map((item) => `• ${item.name} × ${item.qty}`)
     .join('\n');
   const payload = {
-    content: `📦 طلب جديد \`${order.code}\` من ${order.type === 'internal' ? 'عضو' : 'زبون'}`,
+    content: internal
+      ? `🏠 طلب جديد من المتجر الداخلي \`${order.code}\``
+      : `🛒 طلب جديد من المتجر \`${order.code}\``,
     embeds: [
       embed(
-        'طلب متجر جديد',
+        internal ? 'طلب من المتجر الداخلي' : 'طلب من المتجر',
         order.note || 'طلب جديد بانتظار المعالجة.',
         0xe63946,
         [
@@ -358,7 +433,7 @@ async function notifyOrder(order) {
       )
     ]
   };
-  const sent = await sendChannel('orders', payload);
+  const sent = await sendChannel(internal ? 'internalOrders' : 'orders', payload);
   return Boolean(sent);
 }
 
@@ -410,6 +485,10 @@ module.exports = {
   addWarningRole,
   removeWarningRole,
   sendChannel,
+  resolveChannelId,
+  listGuildRoles,
+  getBotStatus,
+  setBotError,
   notifyDiscipline,
   notifyVoteResult,
   notifyOperation,

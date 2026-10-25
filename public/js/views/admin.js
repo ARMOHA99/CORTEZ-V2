@@ -120,6 +120,26 @@ async function tabSettings(box) {
       </div></div>
 
       <div class="card"><div class="card-body adm-form">
+        <h3>ديسكورد والبوت</h3>
+        <label>رابط دعوة سيرفرك (الزر الذي يفتح ديسكورد)<input type="text" name="discordInvite" value="${esc(s['discord.inviteUrl'] || '')}" placeholder="https://discord.gg/xxxxxxx" /></label>
+        <label>رقم قناة إشعارات طلبات المتجر<input type="text" name="chOrders" value="${esc(s['discord.channel.orders'] || '')}" placeholder="مثال: 123456789012345678" /></label>
+        <label>رقم قناة إشعارات المتجر الداخلي<input type="text" name="chInternal" value="${esc(s['discord.channel.internalOrders'] || '')}" placeholder="اتركه فارغًا لاستخدام قناة المتجر" /></label>
+        <label>رقم قناة إشعارات العمليات<input type="text" name="chOperations" value="${esc(s['discord.channel.operations'] || '')}" placeholder="مثال: 123456789012345678" /></label>
+        <p class="adm-note">لنسخ رقم قناة: فعّل Developer Mode في ديسكورد ثم كليك يمين على القناة واختر Copy Channel ID. احفظ الإعدادات أولًا ثم اضغط «اختبار».</p>
+        <div class="adm-actions">
+          <button class="btn btn-ghost btn-sm" type="button" data-test="orders">اختبار قناة الطلبات</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-test="internalOrders">اختبار الداخلي</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-test="operations">اختبار العمليات</button>
+        </div>
+        <h4 style="margin:10px 0 0">حالة البوت</h4>
+        <div id="bot-status" class="adm-form"></div>
+        <div class="adm-actions">
+          <button class="btn btn-ghost btn-sm" type="button" id="bot-refresh">فحص البوت</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="bot-commands">إعادة تسجيل أوامر / (مثل /card)</button>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="card-body adm-form">
         <h3>المتجر والنظام</h3>
         ${sw('storeExternal', 'المتجر الخارجي مفتوح', s['store.externalEnabled'] !== false)}
         ${sw('storeInternal', 'المتجر الداخلي مفتوح', s['store.internalEnabled'] !== false)}
@@ -166,6 +186,38 @@ async function tabSettings(box) {
     try { await post('/api/admin/reset-week'); toast('تم تدوير الأسبوع', 'success'); } catch (e) { toast(e.message, 'danger'); }
   });
 
+  const botBox = box.querySelector('#bot-status');
+  const botRow = (ok, text) => `<div class="adm-row"><span>${ok ? '✅' : '❌'}</span><span>${esc(text)}</span></div>`;
+  async function loadBot() {
+    botBox.innerHTML = '<span class="muted">جارٍ فحص البوت…</span>';
+    try {
+      const { status: st } = await get('/api/admin/bot-status');
+      botBox.innerHTML = [
+        botRow(st.tokenSet, 'توكن البوت موجود (DISCORD_BOT_TOKEN)'),
+        botRow(st.enabled, 'البوت مفعّل (BOT_ENABLED)'),
+        botRow(st.ready, st.ready ? `البوت متصل: ${st.tag}` : 'البوت غير متصل بديسكورد'),
+        botRow(st.guildIdSet, 'رقم السيرفر موجود (DISCORD_GUILD_ID)'),
+        botRow(st.guildFound, st.guildFound ? `البوت داخل السيرفر: ${st.guildName}` : 'البوت غير موجود داخل السيرفر'),
+        botRow(st.channels.orders, 'قناة طلبات المتجر محددة'),
+        botRow(st.channels.internalOrders, 'قناة المتجر الداخلي محددة'),
+        botRow(st.channels.operations, 'قناة العمليات محددة'),
+        st.lastError ? `<p class="adm-note" style="color:#ff6b76">${esc(st.lastError)}</p>` : ''
+      ].join('');
+    } catch (e) { botBox.innerHTML = `<span class="muted">${esc(e.message)}</span>`; }
+  }
+  loadBot();
+  box.querySelector('#bot-refresh').addEventListener('click', loadBot);
+  box.querySelector('#bot-commands').addEventListener('click', async () => {
+    try {
+      const res = await post('/api/admin/bot/commands');
+      toast(res.ok ? 'تم تسجيل الأوامر في ديسكورد' : 'تعذّر تسجيل الأوامر، راجع حالة البوت', res.ok ? 'success' : 'danger');
+      loadBot();
+    } catch (e) { toast(e.message, 'danger'); }
+  });
+  box.querySelectorAll('[data-test]').forEach((btn) => btn.addEventListener('click', async () => {
+    try { await post('/api/admin/bot/test', { channel: btn.dataset.test }); toast('وصلت رسالة تجريبية إلى القناة', 'success'); } catch (e) { toast(e.message, 'danger'); }
+  }));
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const f = form;
@@ -173,6 +225,10 @@ async function tabSettings(box) {
       'organization.name': f.orgName.value.trim() || 'CORTEZ',
       'organization.logoUrl': f.logoUrl.value.trim(),
       'attendance.enabled': f.attendanceEnabled.checked,
+      'discord.inviteUrl': f.discordInvite.value.trim(),
+      'discord.channel.orders': f.chOrders.value.trim(),
+      'discord.channel.internalOrders': f.chInternal.value.trim(),
+      'discord.channel.operations': f.chOperations.value.trim(),
       'system.weekStartDay': Number(f.weekStartDay.value),
       'system.nightShift': { enabled: f.nightEnabled.checked, lock: f.nightLock.checked, start: f.nightStart.value || '22:00', end: f.nightEnd.value || '06:00' },
       'system.autoCloseDutyHours': Number(f.autoClose.value) || 0,
@@ -189,6 +245,10 @@ async function tabSettings(box) {
       state.config = state.config || {};
       state.config.org = { ...(state.config.org || {}), name: body['organization.name'], logoUrl: body['organization.logoUrl'] };
       state.config.attendanceEnabled = body['attendance.enabled'];
+      state.config.discord = { ...(state.config.discord || {}), inviteUrl: body['discord.inviteUrl'] };
+      state.config.links = { ...(state.config.links || {}), discordInvite: body['discord.inviteUrl'] };
+      const inviteLink = document.getElementById('discord-invite');
+      if (inviteLink && body['discord.inviteUrl']) inviteLink.href = body['discord.inviteUrl'];
       applyBrand(document);
       sound.success();
       toast('تم حفظ الإعدادات', 'success');
@@ -197,7 +257,7 @@ async function tabSettings(box) {
 }
 
 /* ═══════════════════════ الرتب والصلاحيات ═══════════════════════ */
-function openRankModal(rank, perms, reload) {
+function openRankModal(rank, perms, reload, discordRoles = []) {
   const editing = Boolean(rank);
   const r = rank || { key: '', name: '', short: '', level: 10, order: 50, color: '#e63946', icon: '◆', discordRoleId: '', description: '', permissions: [] };
   const have = new Set(r.permissions || []);
@@ -218,7 +278,14 @@ function openRankModal(rank, perms, reload) {
           <label>الترتيب في القوائم<input type="number" name="order" value="${Number(r.order) || 0}" /></label>
           <label>اللون<input type="color" name="color" value="${esc(r.color || '#e63946')}" /></label>
           <label>الرمز<input type="text" name="icon" value="${esc(r.icon || '◆')}" maxlength="8" /></label>
-          <label>رقم رول ديسكورد (اختياري)<input type="text" name="discordRoleId" value="${esc(r.discordRoleId || '')}" /></label>
+          <label>اختر رول من سيرفر ديسكورد
+            <select id="role-pick">
+              <option value="">— بدون ربط / إدخال يدوي —</option>
+              ${discordRoles.map((dr) => `<option value="${esc(dr.id)}" data-name="${esc(dr.name)}" ${dr.id === r.discordRoleId ? 'selected' : ''}>${esc(dr.name)}</option>`).join('')}
+            </select>
+          </label>
+          <label>رقم الرول في ديسكورد (ID)<input type="text" name="discordRoleId" value="${esc(r.discordRoleId || '')}" placeholder="مثال: 123456789012345678" /></label>
+          <label>اسم الرول في ديسكورد<input type="text" name="discordRoleName" value="${esc(r.discordRoleName || '')}" maxlength="100" /></label>
         </div>
         <label>الوصف<input type="text" name="description" value="${esc(r.description || '')}" maxlength="300" /></label>
         <div class="adm-row">
@@ -238,6 +305,11 @@ function openRankModal(rank, perms, reload) {
   if (!modal) return;
   const form = modal.el.querySelector('#rank-form');
   const boxes = () => form.querySelectorAll('.adm-perm input');
+  form.querySelector('#role-pick').addEventListener('change', (event) => {
+    const option = event.target.selectedOptions[0];
+    form.discordRoleId.value = event.target.value;
+    form.discordRoleName.value = event.target.value ? (option.dataset.name || '') : '';
+  });
   form.querySelector('#perm-all').addEventListener('click', () => boxes().forEach((b) => { b.checked = true; }));
   form.querySelector('#perm-none').addEventListener('click', () => boxes().forEach((b) => { b.checked = false; }));
   form.addEventListener('submit', async (event) => {
@@ -250,6 +322,7 @@ function openRankModal(rank, perms, reload) {
       color: form.color.value,
       icon: form.icon.value.trim() || '◆',
       discordRoleId: form.discordRoleId.value.trim(),
+      discordRoleName: form.discordRoleName.value.trim(),
       description: form.description.value.trim(),
       permissions: Array.from(boxes()).filter((b) => b.checked).map((b) => b.value)
     };
@@ -265,11 +338,17 @@ function openRankModal(rank, perms, reload) {
 }
 
 async function tabRanks(box) {
-  const [{ ranks }, permData] = await Promise.all([get('/api/admin/ranks'), get('/api/admin/permissions')]);
+  const [{ ranks }, permData, roleData] = await Promise.all([
+    get('/api/admin/ranks'),
+    get('/api/admin/permissions'),
+    get('/api/admin/discord-roles').catch(() => ({ roles: [], available: false }))
+  ]);
+  const discordRoles = roleData.roles || [];
   const perms = permData.permissions || [];
   const list = (ranks || []).slice().sort((a, b) => (b.level || 0) - (a.level || 0));
   box.innerHTML = `
     <div class="adm-actions" style="margin-bottom:14px"><button class="btn btn-primary" id="rk-new" type="button">+ رتبة جديدة</button></div>
+    ${roleData.available === false ? '<p class="adm-note" style="margin-bottom:12px">تعذّر جلب رولات ديسكورد (تأكد أن البوت يعمل وموجود في السيرفر). يمكنك مع ذلك إدخال رقم الرول يدويًا.</p>' : ''}
     <div class="adm-grid">
       ${list.map((r) => `
         <div class="adm-rank-card">
@@ -278,6 +357,7 @@ async function tabRanks(box) {
             <span class="adm-tag">${esc(r.key)}</span>
           </div>
           <div class="adm-note">المستوى ${Number(r.level) || 0} • ${(r.permissions || []).length} صلاحية${r.isSystem ? ' • نظامية' : ''}</div>
+          <div class="adm-note">${r.discordRoleId ? '🔗 مربوطة بديسكورد: ' + esc(r.discordRoleName || r.discordRoleId) : 'غير مربوطة برول في ديسكورد'}</div>
           <div class="adm-actions">
             <button class="btn btn-ghost btn-sm" data-edit="${esc(idOf(r))}" type="button">تعديل</button>
             ${r.isSystem ? '' : `<button class="btn btn-ghost btn-sm" data-del="${esc(idOf(r))}" type="button">حذف</button>`}
@@ -285,8 +365,8 @@ async function tabRanks(box) {
         </div>`).join('')}
     </div>`;
   const reload = () => tabRanks(box).catch((e) => { box.innerHTML = errBox(e); });
-  box.querySelector('#rk-new').addEventListener('click', () => openRankModal(null, perms, reload));
-  box.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openRankModal(list.find((r) => idOf(r) === b.dataset.edit), perms, reload)));
+  box.querySelector('#rk-new').addEventListener('click', () => openRankModal(null, perms, reload, discordRoles));
+  box.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openRankModal(list.find((r) => idOf(r) === b.dataset.edit), perms, reload, discordRoles)));
   box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
     const r = list.find((x) => idOf(x) === b.dataset.del);
     if (!(await confirmDialog({ title: 'حذف الرتبة', message: `سيُنقل أعضاء «${r.name}» إلى رتبة عضو. متأكد؟`, confirmText: 'حذف', danger: true }))) return;

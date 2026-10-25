@@ -57,8 +57,9 @@ function applyPublic(cfg) {
   const year = document.getElementById('landing-year');
   if (year) year.textContent = cfg.year || new Date().getFullYear();
   const invite = document.getElementById('discord-invite');
-  if (invite && cfg.discord && cfg.discord.inviteUrl) invite.href = cfg.discord.inviteUrl;
-  else if (invite && cfg.links && cfg.links.discordInvite) invite.href = cfg.links.discordInvite;
+  const inviteUrl = (cfg.links && cfg.links.discordInvite) || (cfg.discord && cfg.discord.inviteUrl) || '';
+  if (invite && inviteUrl) invite.href = inviteUrl;
+  else if (invite) invite.classList.add('hidden');
   const loginBtn = document.getElementById('login-btn');
   if (loginBtn && !cfg.discordConfigured) loginBtn.classList.add('disabled');
   // dev login

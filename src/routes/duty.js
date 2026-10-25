@@ -12,7 +12,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const summary = await dutyService.personalSummary(req.user._id);
-    res.json({ summary });
+    res.json({ summary, serverTime: new Date().toISOString() });
   })
 );
 

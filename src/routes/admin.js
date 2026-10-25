@@ -159,6 +159,69 @@ router.patch(
   })
 );
 
+async function resolveRoleName(roleId, givenName) {
+  const id = String(roleId || '').trim();
+  if (!id) return '';
+  const given = String(givenName || '').trim().slice(0, 100);
+  if (given) return given;
+  try {
+    const roles = await discordService.listGuildRoles();
+    const found = roles.find((role) => role.id === id);
+    return found ? found.name : '';
+  } catch (error) {
+    return '';
+  }
+}
+
+router.get(
+  '/discord-roles',
+  requireAuth,
+  requirePermission('ranks:manage'),
+  asyncHandler(async (req, res) => {
+    try {
+      const roles = await discordService.listGuildRoles();
+      res.json({ roles, available: true });
+    } catch (error) {
+      res.json({ roles: [], available: false, reason: error.message });
+    }
+  })
+);
+
+router.get(
+  '/bot-status',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    res.json({ status: await discordService.getBotStatus() });
+  })
+);
+
+router.post(
+  '/bot/commands',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const bot = require('../bot');
+    const ok = await bot.registerCommands();
+    res.json({ ok: Boolean(ok), status: await discordService.getBotStatus() });
+  })
+);
+
+router.post(
+  '/bot/test',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const key = String((req.body || {}).channel || '');
+    if (!['orders', 'internalOrders', 'operations'].includes(key)) throw httpError(400, 'قناة غير معروفة', 'INVALID_CHANNEL');
+    const channelId = await discordService.resolveChannelId(key);
+    if (!channelId) throw httpError(400, 'لم تُحدَّد هذه القناة بعد', 'NO_CHANNEL');
+    const sent = await discordService.sendChannel(key, { content: '✅ رسالة تجريبية من منصة CORTEZ — البوت يعمل على هذه القناة.' });
+    if (!sent) throw httpError(502, 'تعذّر الإرسال: تأكد من رقم القناة وأن البوت يملك صلاحية إرسال الرسائل فيها', 'SEND_FAILED');
+    res.json({ ok: true });
+  })
+);
+
 router.get(
   '/ranks',
   requireAuth,
@@ -191,7 +254,8 @@ router.post(
       color: /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : '#e63946',
       icon: String(body.icon || '◆').slice(0, 8),
       permissions,
-      discordRoleId: String(body.discordRoleId || ''),
+      discordRoleId: String(body.discordRoleId || '').trim(),
+      discordRoleName: await resolveRoleName(body.discordRoleId, body.discordRoleName),
       order: Number(body.order) || 50,
       description: String(body.description || '').slice(0, 300)
     });
@@ -226,7 +290,12 @@ router.patch(
     if (body.icon !== undefined) rank.icon = String(body.icon).slice(0, 8);
     if (body.order !== undefined) rank.order = Number(body.order) || 0;
     if (body.description !== undefined) rank.description = String(body.description).slice(0, 300);
-    if (body.discordRoleId !== undefined) rank.discordRoleId = String(body.discordRoleId || '');
+    if (body.discordRoleId !== undefined) {
+      rank.discordRoleId = String(body.discordRoleId || '').trim();
+      rank.discordRoleName = await resolveRoleName(rank.discordRoleId, body.discordRoleName);
+    } else if (body.discordRoleName !== undefined) {
+      rank.discordRoleName = String(body.discordRoleName || '').slice(0, 100);
+    }
     if (Array.isArray(body.permissions)) {
       rank.permissions = body.permissions
         .map(String)

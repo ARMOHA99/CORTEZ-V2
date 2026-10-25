@@ -24,8 +24,12 @@ router.get(
     } catch (error) {
       settings = {};
     }
+    const invite = String(settings['discord.inviteUrl'] || '').trim();
     res.json({
       ...payload,
+      discord: { ...(payload.discord || {}), inviteUrl: invite },
+      links: { ...(payload.links || {}), discordInvite: invite },
+      nightShift: settings['system.nightShift'] || (payload.system && payload.system.nightShift) || null,
       org: {
         ...(payload.org || {}),
         name: settings['organization.name'] || 'CORTEZ',

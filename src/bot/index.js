@@ -52,7 +52,10 @@ async function handleCard(interaction) {
 }
 
 async function registerCommands() {
-  if (!client || !client.isReady()) return;
+  if (!client || !client.isReady()) {
+    discordService.setBotError('البوت غير متصل حالياً، فلا يمكن تسجيل الأوامر.');
+    return false;
+  }
   const { SlashCommandBuilder } = require('discord.js');
   const commands = [
     new SlashCommandBuilder()
@@ -73,13 +76,17 @@ async function registerCommands() {
       if (guild) {
         await guild.commands.set(commands);
         console.log(`[Bot] تم تسجيل أوامر الرتبة في ${guild.name}`);
-        return;
+        return true;
       }
+      discordService.setBotError('البوت ليس عضواً في السيرفر المحدد (تحقق من DISCORD_GUILD_ID وأضف البوت للسيرفر).');
     }
     await client.application.commands.set(commands);
     console.log('[Bot] تم تسجيل الأوامر عالمياً');
+    return true;
   } catch (error) {
     console.error('[Bot] register commands:', error.message);
+    discordService.setBotError('فشل تسجيل الأوامر: ' + error.message + ' — أعد دعوة البوت مع صلاحية applications.commands.');
+    return false;
   }
 }
 
@@ -133,6 +140,7 @@ function startBot() {
 
     client.once(Events.ClientReady, async (readyClient) => {
       console.log(`[Bot] متصل كـ ${readyClient.user.tag}`);
+      discordService.setBotError('');
       try {
         readyClient.user.setActivity(config.bot.activity, { type: ActivityType.Watching });
       } catch (error) {
@@ -172,12 +180,42 @@ function startBot() {
       }
     });
 
+    const syncMember = async (discordId) => {
+      try {
+        const User = require('../models/User');
+        const user = await User.findOne({ discordId: String(discordId) }).lean();
+        if (!user) return;
+        await require('../services/sync').syncUser(user, { emit: true });
+      } catch (error) {
+        console.error('[Bot] role sync:', error.message);
+      }
+    };
+
+    client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
+      if (config.discord.guildId && newMember.guild.id !== config.discord.guildId) return;
+      syncMember(newMember.id);
+    });
+
+    client.on(Events.GuildMemberRemove, (member) => {
+      if (config.discord.guildId && member.guild.id !== config.discord.guildId) return;
+      syncMember(member.id);
+    });
+
+    client.on(Events.GuildCreate, () => {
+      registerCommands();
+    });
+
     client.on(Events.Error, (error) => {
       console.error('[Bot] client error:', error.message);
     });
 
     client.login(config.bot.token).catch((error) => {
       console.error('[Bot] login failed:', error.message);
+      const message = String(error.message || '');
+      let hint = '';
+      if (/disallowed intents/i.test(message)) hint = ' — فعّل Server Members Intent من Developer Portal ثم Bot.';
+      else if (/invalid token|token/i.test(message)) hint = ' — توكن البوت خاطئ، انسخه من جديد (Reset Token).';
+      discordService.setBotError('فشل تسجيل دخول البوت: ' + message + hint);
     });
 
     return client;
@@ -199,4 +237,4 @@ function stopBot() {
   discordService.setClient(null);
 }
 
-module.exports = { startBot, stopBot, buildCardFor };
+module.exports = { startBot, stopBot, buildCardFor, registerCommands };

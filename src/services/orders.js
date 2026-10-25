@@ -85,9 +85,7 @@ async function createOrder({ type = 'external', user = null, customer = {}, item
   realtime.emit('dashboard:refresh', { reason: 'order' });
 
   try {
-    if (config.discord.channels.orders) {
-      discordService.notifyOrder(order.toJSON()).catch(() => null);
-    }
+    discordService.notifyOrder(order.toJSON()).catch(() => null);
   } catch (error) {
     /* ignore */
   }

@@ -159,9 +159,7 @@ async function createOperation({ data, user }) {
   }
 
   try {
-    if (config.discord.channels.operations) {
-      discordService.notifyOperation(operation.toJSON()).catch(() => null);
-    }
+    discordService.notifyOperation(operation.toJSON()).catch(() => null);
   } catch (error) {
     /* ignore */
   }
