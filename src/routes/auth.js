@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const config = require('../../config');
+const settingsService = require('../services/settings');
 const discordService = require('../services/discord');
 const { getRankByDiscordRole, getRank } = require('../services/ranks');
 const { asyncHandler } = require('../utils/http');
@@ -115,6 +116,15 @@ router.get(
 
     const rank = await getRank(rankKey);
     if (!rank) rankKey = 'guest';
+
+    // من لا يملك رولاً مربوطاً برتبة في الموقع لا يدخل (يمكن إيقاف هذا من الإعدادات)
+    const requireRole = (await settingsService.get('access.requireDiscordRole', true)) !== false;
+    if (requireRole && rankKey === 'guest') {
+      if (existing) {
+        await User.updateOne({ _id: existing._id }, { $set: { rank: 'guest', sessionInvalid: true } });
+      }
+      return res.redirect('/?error=no_role');
+    }
 
     const displayName =
       (member && member.nick) ||

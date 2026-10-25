@@ -111,6 +111,7 @@ async function tabSettings(box) {
 
       <div class="card"><div class="card-body adm-form">
         <h3>الحضور والدوام</h3>
+        ${sw('requireRole', 'لا يدخل الموقع إلا من يملك رولاً مربوطاً برتبة (ويُطرد عند سحب الرول)', s['access.requireDiscordRole'] !== false)}
         ${sw('attendanceEnabled', 'تسجيل الحضور مفعّل', s['attendance.enabled'] !== false)}
         <label>اليوم الذي يبدأ منه الأسبوع (يُصفَّر عنده الحضور والهدف)
           <select name="weekStartDay">${WEEKDAYS.map((d, i) => `<option value="${i}" ${Number(s['system.weekStartDay']) === i ? 'selected' : ''}>${d}</option>`).join('')}</select>
@@ -256,6 +257,7 @@ async function tabSettings(box) {
     const body = {
       'organization.name': f.orgName.value.trim() || 'CORTEZ',
       'organization.logoUrl': f.logoUrl.value.trim(),
+      'access.requireDiscordRole': f.requireRole.checked,
       'attendance.enabled': f.attendanceEnabled.checked,
       'discord.inviteUrl': f.discordInvite.value.trim(),
       'discord.channel.orders': f.chOrders.value.trim(),

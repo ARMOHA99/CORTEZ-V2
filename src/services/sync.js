@@ -83,6 +83,12 @@ async function syncUser(user, options = {}) {
 
   let rankChanged = false;
   let revoked = false;
+  let requireRole = true;
+  try {
+    requireRole = (await require('./settings').get('access.requireDiscordRole', true)) !== false;
+  } catch (error) {
+    requireRole = true;
+  }
 
   if (computedRank) {
     if (computedRank !== user.rank) {
@@ -93,10 +99,13 @@ async function syncUser(user, options = {}) {
     }
   } else if (user.rank !== 'guest') {
     update.rank = 'guest';
-    update.sessionInvalid = true;
+    update.sessionInvalid = requireRole;
     rankChanged = true;
+    revoked = requireRole;
+  } else if (requireRole && !user.sessionInvalid) {
+    update.sessionInvalid = true;
     revoked = true;
-  } else if (user.sessionInvalid) {
+  } else if (!requireRole && user.sessionInvalid) {
     update.sessionInvalid = false;
   }
 

@@ -54,6 +54,19 @@ export function initSocket() {
     emit('socket:connected');
   });
 
+  // سُحبت صلاحية دخولك (سحب الرول في ديسكورد) → خروج فوري من الموقع
+  socket.on('auth:revoked', (payload) => {
+    toast((payload && payload.reason) || 'تم سحب صلاحية دخولك إلى الموقع', 'danger', 'انتهت الجلسة');
+    setTimeout(() => { window.location.href = '/'; }, 1600);
+  });
+
+  // تغيّرت رتبتك في ديسكورد → تحديث الصلاحيات فورًا
+  socket.on('auth:refresh', (payload) => {
+    if (!payload || payload.reason !== 'rank-changed') return;
+    toast('تم تحديث رتبتك وصلاحياتك من ديسكورد…', 'info', 'تحديث الرتبة');
+    setTimeout(() => { window.location.reload(); }, 1300);
+  });
+
   socket.on('disconnect', () => {
     connected = false;
     emit('socket:disconnected');

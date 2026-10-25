@@ -187,7 +187,13 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   if (params.get('error')) {
     const err = document.getElementById('landing-error');
-    if (err) { err.textContent = 'فشل تسجيل الدخول: ' + params.get('error'); err.classList.remove('hidden'); }
+    if (err) { const reasons = {
+      not_in_guild: 'حسابك ليس عضواً في سيرفر ديسكورد الخاص بنا.',
+      no_role: 'ليس لديك رول في ديسكورد يسمح بدخول الموقع. تواصل مع الإدارة ليمنحوك الرول المناسب.',
+      banned: 'أنت محظور في سيرفر ديسكورد.',
+      blocked: 'تم حظر حسابك من الموقع.'
+    };
+    err.textContent = reasons[params.get('error')] || ('فشل تسجيل الدخول: ' + params.get('error')); err.classList.remove('hidden'); }
   }
   try {
     const me = await get('/api/me');

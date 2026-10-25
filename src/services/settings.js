@@ -19,6 +19,7 @@ function defaultSettings() {
     'organization.name': 'CORTEZ',
     'organization.logoUrl': '',
     'attendance.enabled': true,
+    'access.requireDiscordRole': true,
     'discord.inviteUrl': '',
     'discord.channel.orders': '',
     'discord.channel.internalOrders': '',
