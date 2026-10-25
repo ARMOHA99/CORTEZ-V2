@@ -136,6 +136,7 @@ async function tabSettings(box) {
         <div class="adm-actions">
           <button class="btn btn-ghost btn-sm" type="button" id="bot-refresh">فحص البوت</button>
           <button class="btn btn-ghost btn-sm" type="button" id="bot-commands">إعادة تسجيل أوامر / (مثل /card)</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="bot-sync-check">فحص مزامنة حسابي</button>
         </div>
       </div></div>
 
@@ -214,6 +215,17 @@ async function tabSettings(box) {
       loadBot();
     } catch (e) { toast(e.message, 'danger'); }
   });
+  box.querySelector('#bot-sync-check').addEventListener('click', async () => {
+    try {
+      const res = await get('/api/me/sync-check');
+      const modal = openModal({
+        title: 'فحص مزامنة حسابك',
+        subtitle: 'SYNC CHECK',
+        body: `${res.problem ? `<p style="color:#ff6b76;font-weight:700">${esc(res.problem)}</p>` : '<p style="color:#2ecc71;font-weight:700">لا توجد مشكلة ظاهرة في المزامنة.</p>'}<pre style="direction:ltr;text-align:left;white-space:pre-wrap;font-size:12px">${esc(JSON.stringify(res, null, 2))}</pre>`
+      });
+      if (!modal) return;
+    } catch (e) { toast(e.message, 'danger'); }
+  });
   box.querySelectorAll('[data-test]').forEach((btn) => btn.addEventListener('click', async () => {
     try { await post('/api/admin/bot/test', { channel: btn.dataset.test }); toast('وصلت رسالة تجريبية إلى القناة', 'success'); } catch (e) { toast(e.message, 'danger'); }
   }));
@@ -241,7 +253,7 @@ async function tabSettings(box) {
       'system.announcementBanner': f.banner.value
     };
     try {
-      await patch('/api/admin/settings', { settings: body });
+      await patch('/api/admin/settings', { entries: Object.entries(body).map(([key, value]) => ({ key, value })) });
       state.config = state.config || {};
       state.config.org = { ...(state.config.org || {}), name: body['organization.name'], logoUrl: body['organization.logoUrl'] };
       state.config.attendanceEnabled = body['attendance.enabled'];

@@ -148,8 +148,9 @@ async function getGuildMember(discordId) {
     const member = await rest(`/guilds/${config.discord.guildId}/members/${discordId}`);
     return normalizeMember(member);
   } catch (error) {
+    if (error.status === 404 || error.code === 10007) return null;
     console.error('[Discord] REST member:', error.message);
-    return null;
+    throw error;
   }
 }
 

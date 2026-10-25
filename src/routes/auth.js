@@ -110,7 +110,7 @@ router.get(
       rankKey = 'owner';
     } else if (member) {
       const mappedRank = await getRankByDiscordRole(member.roles || []);
-      if (mappedRank) rankKey = mappedRank.key;
+      rankKey = mappedRank ? mappedRank.key : 'guest';
     }
 
     const rank = await getRank(rankKey);

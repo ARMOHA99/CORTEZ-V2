@@ -38,6 +38,55 @@ router.get(
   })
 );
 
+router.get(
+  '/sync-check',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const discordService = require('../services/discord');
+    const { getRanks } = require('../services/ranks');
+    const out = {
+      botTokenSet: Boolean(config.bot.token),
+      botEnabled: Boolean(config.bot.enabled),
+      botReady: discordService.isReady(),
+      guildIdSet: Boolean(config.discord.guildId),
+      yourDiscordIdIsInOwnerIds: config.discord.ownerIds.includes(String(req.user.discordId)),
+      yourCurrentRank: req.user.rank
+    };
+    try {
+      const status = await discordService.getBotStatus();
+      out.botName = status.tag || '';
+      out.botInsideServer = status.guildFound;
+      out.botError = status.lastError || '';
+    } catch (error) {
+      out.botName = '';
+    }
+    if (!out.botTokenSet || !out.guildIdSet) {
+      out.problem = 'توكن البوت أو رقم السيرفر غير مضبوط على Render لهذا الموقع، لذلك لا تحدث أي مزامنة للرولات.';
+      return res.json(out);
+    }
+    try {
+      const member = await discordService.getGuildMember(req.user.discordId);
+      out.memberFound = Boolean(member);
+      out.yourDiscordRoleIds = member ? member.roles : [];
+      const ranks = await getRanks(true);
+      out.ranksLinkedToDiscordRoles = ranks
+        .filter((rank) => rank.discordRoleId)
+        .map((rank) => ({ rank: rank.key, roleId: rank.discordRoleId, roleName: rank.discordRoleName || '' }));
+      const matched = ranks
+        .filter((rank) => rank.discordRoleId && (out.yourDiscordRoleIds || []).includes(rank.discordRoleId))
+        .sort((a, b) => b.level - a.level)[0];
+      out.rankFromYourRoles = matched ? matched.key : null;
+      if (!member) out.problem = 'البوت لا يرى حسابك داخل السيرفر (تأكد أن البوت داخل نفس السيرفر وأن DISCORD_GUILD_ID صحيح).';
+      else if (!out.ranksLinkedToDiscordRoles.length) out.problem = 'لا توجد أي رتبة في الموقع مربوطة برول ديسكورد. اربط الرتب من لوحة الإدارة ثم الرتب.';
+      else if (!matched) out.problem = 'أنت لا تملك أي رول من الرولات المربوطة بالرتب.';
+      else out.problem = '';
+    } catch (error) {
+      out.problem = 'البوت لم يستطع قراءة العضو من ديسكورد: ' + error.message + ' (غالبًا التوكن خاطئ أو البوت ليس داخل السيرفر).';
+    }
+    return res.json(out);
+  })
+);
+
 router.post(
   '/sync',
   requireAuth,

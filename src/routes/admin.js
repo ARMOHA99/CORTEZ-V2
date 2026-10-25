@@ -86,7 +86,14 @@ router.patch(
   requirePermission('settings:manage'),
   asyncHandler(async (req, res) => {
     if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
-    const incoming = (req.body && req.body.settings) || req.body || {};
+    let incoming = {};
+    if (req.body && Array.isArray(req.body.entries)) {
+      for (const entry of req.body.entries) {
+        if (entry && typeof entry.key === 'string') incoming[entry.key] = entry.value;
+      }
+    } else {
+      incoming = (req.body && req.body.settings) || req.body || {};
+    }
     const allowed = Object.keys(settingsService.defaultSettings());
     const updates = {};
 
@@ -152,7 +159,7 @@ router.patch(
       description: `تحديث إعدادات النظام (${Object.keys(updates).join(', ')})`,
       targetType: 'settings',
       targetId: 'system',
-      meta: updates,
+      meta: { keys: Object.keys(updates) },
       req
     });
     res.json({ ok: true, settings: await settingsService.getAll() });
