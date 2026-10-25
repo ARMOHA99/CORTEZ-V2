@@ -74,7 +74,7 @@ export const del = (path, options) => api(path, { ...options, method: 'DELETE' }
 
 export async function upload(file) {
   const form = new FormData();
-  form.append('file', file);
+  form.append('image', file);
   return api('/api/upload', { method: 'POST', body: form });
 }
 

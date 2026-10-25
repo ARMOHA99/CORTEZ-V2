@@ -7,19 +7,18 @@
   <meta name="description" content="منصة منظمة كورتاس — عقد الدم، الدوام، العمليات، الخزينة، والمتجر. الإمبراطورية لا تُورَّث… تُنتزَع." />
   <meta name="release" content="__RELEASE__" />
   <meta name="csrf-token" content="__CSRF__" />
-  <title>كورتاس • CORTEZ</title>
+  <title>CORTEZ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%23e63946'%3E%E2%9C%9E%3C/text%3E%3C/svg%3E" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Cairo:wght@300;400;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%23e63946'%3EC%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="/css/views.css" />
 </head>
 <body>
   <div id="boot-screen" class="boot-screen">
     <div class="boot-glow"></div>
-    <div class="boot-logo">كورتاس</div>
-    <div class="boot-latin">C O R T E Z</div>
+    <div class="boot-logo org-name">CORTEZ</div>
     <div class="boot-line"><span></span></div>
     <p class="boot-text">جارٍ فتح أبواب العائلة…</p>
   </div>
@@ -39,9 +38,9 @@
     <div id="entry-beam" class="entry-beam" aria-hidden="true"></div>
 
     <header class="landing-header">
-      <a href="/" class="brand-mini" aria-label="كورتاس">
-        <span class="brand-sigil">✞</span>
-        <span class="brand-text">كورتاس <em>CORTEZ</em></span>
+      <a href="/" class="brand-mini" aria-label="CORTEZ">
+        <span class="brand-sigil">C</span>
+        <span class="brand-text"><span class="org-name">CORTEZ</span></span>
       </a>
       <nav class="landing-nav">
         <a href="#/shop" data-sound="click">المتجر الخارجي</a>
@@ -55,12 +54,11 @@
         <div class="sigil-ring ring-1"></div>
         <div class="sigil-ring ring-2"></div>
         <div class="sigil-ring ring-3"></div>
-        <div class="sigil-mark">✞</div>
+        <div class="sigil-mark">C</div>
       </div>
 
       <p class="eyebrow hero-eyebrow">CORTEZ CRIME SYNDICATE <span>•</span> LOS SANTOS</p>
-      <h1 class="hero-logo" data-text="كورتاس">كورتاس</h1>
-      <div class="hero-latin">C O R T E Z</div>
+      <h1 class="hero-logo org-name" data-text="CORTEZ">CORTEZ</h1>
       <p class="hero-tagline">الإمبراطورية لا تُورَّث… تُنتزَع</p>
       <p class="hero-desc" id="hero-desc">
         كورتاس ليست مجرد عائلة، بل كيان اقتصادي وعسكري يتحكم بشوارع لوس سانتوس من الظل.
@@ -97,7 +95,7 @@
 
     <footer class="landing-footer">
       <p id="landing-motto">الدم يوحّدنا، والولاء يخلّدنا</p>
-      <p class="tiny">© <span id="landing-year"></span> <span class="org-name">كورتاس</span> — جميع الحقوق محفوظة. منصة غير رسمية لـ GTA Roleplay.</p>
+      <p class="tiny">© <span id="landing-year"></span> <span class="org-name">CORTEZ</span> — جميع الحقوق محفوظة. منصة غير رسمية لـ GTA Roleplay.</p>
     </footer>
   </div>
 
@@ -106,10 +104,9 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <a href="#/dashboard" class="brand" data-sound="click">
-          <span class="brand-sigil">✞</span>
+          <span class="brand-sigil">C</span>
           <span class="brand-copy">
-            <strong class="org-name">كورتاس</strong>
-            <small>C O R T E Z</small>
+            <strong class="org-name">CORTEZ</strong>
           </span>
         </a>
         <button class="icon-btn sidebar-close" id="sidebar-close" aria-label="إغلاق القائمة">✕</button>
@@ -134,10 +131,10 @@
 
     <div class="app-main">
       <header class="topbar">
-        <button class="icon-btn menu-btn" id="menu-btn" aria-label="القائمة">☰</button>
+        <button class="menu-btn rooms-btn" id="menu-btn" type="button" aria-label="الرومات"><span class="rooms-ico">☰</span><span class="rooms-label">الرومات</span></button>
         <div class="page-heading">
           <p class="eyebrow" id="page-kicker">CORTEZ</p>
-          <h2 id="page-title">لوحة القيادة</h2>
+          <h2 id="page-title">داشبورد</h2>
         </div>
         <div class="topbar-actions">
           <div class="online-pill" title="الأعضاء المتصلون الآن">
@@ -184,7 +181,7 @@
     <div class="pact-frame">
       <div class="pact-doc" id="pact-doc">
         <div class="pact-top">
-          <span class="pact-mark">✞</span>
+          <span class="pact-mark">C</span>
           <div>
             <p class="eyebrow">BLOOD PACT • <span id="pact-version">V1</span></p>
             <h2 id="pact-title">عقد الدم</h2>

@@ -2,6 +2,7 @@ const express = require('express');
 const { asyncHandler, httpError } = require('../utils/http');
 const { requireAuth, requirePermission } = require('../middleware/auth');
 const dutyService = require('../services/duty');
+const settingsService = require('../services/settings');
 const time = require('../utils/time');
 
 const router = express.Router();
@@ -28,6 +29,8 @@ router.post(
   '/start',
   requireAuth,
   asyncHandler(async (req, res) => {
+    const attendanceEnabled = await settingsService.get('attendance.enabled', true);
+    if (attendanceEnabled === false) throw httpError(403, 'تسجيل الحضور متوقف حالياً من الإدارة', 'ATTENDANCE_DISABLED');
     const result = await dutyService.startDuty(req.user, req, { bypassLock: req.permissions.includes('duty:night') });
     const summary = await dutyService.personalSummary(req.user._id);
     res.json({ ok: true, ...result, summary });
@@ -103,7 +106,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const isSelf = String(req.user._id) === String(req.params.userId);
-    if (!isSelf && !req.permissions.includes('duty:manage')) {
+    if (!isSelf && !req.permissions.includes('duty:manage') && !req.permissions.includes('members:view')) {
       throw httpError(403, 'لا تملك صلاحية عرض تقارير الآخرين', 'FORBIDDEN');
     }
     const mongoose = require('mongoose');

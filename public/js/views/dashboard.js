@@ -2,7 +2,7 @@ import { get } from '../core/api.js';
 import { state } from '../core/state.js';
 import { esc, money, num, hours, timeAgo, avatar, userCell, statusBadge, kpi, progress, animateProgress, pageHeader, emptyState, countUp, installTilt } from '../core/ui.js';
 
-export const meta = { title: 'لوحة القيادة', kicker: 'CORTEZ' };
+export const meta = { title: 'داشبورد', kicker: 'CORTEZ' };
 
 export async function render(root) {
   root.innerHTML = '<div class="view-loading"><div class="loader-ring"></div></div>';
@@ -11,7 +11,7 @@ export async function render(root) {
     const user = state.user || {};
     const goal = data.goal || {};
     root.innerHTML = `
-      ${pageHeader({ kicker: 'CORTEZ • OVERVIEW', title: 'لوحة القيادة', description: `مرحباً ${esc(user.displayName || 'بك')}، نظرة سريعة على نشاط العائلة اليوم.` })}
+      ${pageHeader({ kicker: 'CORTEZ • OVERVIEW', title: 'داشبورد', description: `مرحباً ${esc(user.displayName || 'بك')}، نظرة سريعة على نشاط العائلة اليوم.` })}
       
       <div class="hero-strip tilt">
         <div>

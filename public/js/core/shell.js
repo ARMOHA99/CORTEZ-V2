@@ -6,10 +6,11 @@ import { api, get, post } from './api.js';
 import { esc, avatar, avatarUrl, timeAgo, userCell } from './ui.js';
 import { initSocket } from './socket.js';
 import * as sound from './sound.js';
+import { applyBrand } from './brand.js';
 
 const NAV = [
   { group: 'عام', items: [
-    { id: 'dashboard', label: 'لوحة القيادة', icon: '◆', route: '#/dashboard', perm: 'dashboard:view' },
+    { id: 'dashboard', label: 'داشبورد', icon: '◆', route: '#/dashboard', perm: 'dashboard:view' },
     { id: 'duty', label: 'الدوام', icon: '◉', route: '#/duty' },
     { id: 'attendance', label: 'جدول الحضور', icon: '▦', route: '#/attendance', perm: 'attendance:view' },
     { id: 'leaderboard', label: 'لوحة الشرف', icon: '★', route: '#/leaderboard', perm: 'leaderboard:view' }
@@ -23,7 +24,7 @@ const NAV = [
     { id: 'members', label: 'سجل الأعضاء', icon: '◈', route: '#/members', perm: 'members:view' },
     { id: 'discipline', label: 'سجل الانضباط', icon: '⚠', route: '#/discipline', perm: 'discipline:view' },
     { id: 'tickets', label: 'التذاكر', icon: '✉', route: '#/tickets' },
-    { id: 'pacts', label: 'عقد الدم', icon: '✞', route: '#/pacts', perm: 'pacts:view' }
+    { id: 'pacts', label: 'عقد الدم', icon: '✒', route: '#/pacts', perm: 'pacts:view' }
   ]},
   { group: 'الخدمات', items: [
     { id: 'store', label: 'المتجر الداخلي', icon: '■', route: '#/store-internal', perm: 'store:internal' },
@@ -31,16 +32,22 @@ const NAV = [
     { id: 'announcements', label: 'الإعلانات', icon: '◔', route: '#/announcements' }
   ]},
   { group: 'إدارة', items: [
-    { id: 'admin', label: 'لوحة الإدارة', icon: '⚙', route: '#/admin', perm: 'settings:manage' }
+    { id: 'admin', label: 'لوحة الإدارة', icon: '⚙', route: '#/admin', anyPerm: ['settings:manage', 'ranks:manage', 'store:manage', 'announcements:manage', 'discipline:manage', 'pacts:manage', 'members:manage'] }
   ]}
 ];
+
+function visibleItem(item) {
+  if (item.perm && !can(item.perm)) return false;
+  if (item.anyPerm && !item.anyPerm.some((perm) => can(perm))) return false;
+  return true;
+}
 
 export function renderNav() {
   const nav = document.getElementById('side-nav');
   const mobile = document.getElementById('mobile-nav');
   if (!nav) return;
   const html = NAV.map((group) => {
-    const items = group.items.filter((item) => !item.perm || can(item.perm));
+    const items = group.items.filter(visibleItem);
     if (!items.length) return '';
     return `<div class="nav-group-label">${esc(group.group)}</div>` + items.map((item) => 
       `<a href="${item.route}" class="side-link" data-nav="${item.id}" data-sound="click"><span class="nav-icon">${item.icon}</span><span>${esc(item.label)}</span></a>`
@@ -48,7 +55,7 @@ export function renderNav() {
   }).join('');
   nav.innerHTML = html || '';
   if (mobile) {
-    const mhtml = NAV.flatMap((g) => g.items).filter((item) => !item.perm || can(item.perm)).slice(0, 6).map((item) =>
+    const mhtml = NAV.flatMap((g) => g.items).filter(visibleItem).slice(0, 6).map((item) =>
       `<a href="${item.route}" class="mobile-link" data-nav="${item.id}" data-sound="click"><span>${item.icon}</span><span>${esc(item.label)}</span></a>`
     ).join('');
     mobile.innerHTML = mhtml;
@@ -122,13 +129,23 @@ export function initShell() {
 
   if (app) app.classList.add('entering');
 
-  if (menuBtn && sidebar) menuBtn.addEventListener('click', () => { sidebar.classList.add('open'); document.body.classList.add('sidebar-open'); });
-  if (sidebarClose && sidebar) sidebarClose.addEventListener('click', () => { sidebar.classList.remove('open'); document.body.classList.remove('sidebar-open'); });
+  const setDrawer = (open) => {
+    if (!sidebar) return;
+    sidebar.classList.toggle('open', open);
+    if (app) app.classList.toggle('nav-open', open);
+    document.body.classList.toggle('sidebar-open', open);
+  };
+
+  if (menuBtn && sidebar) menuBtn.addEventListener('click', (e) => { e.stopPropagation(); setDrawer(!sidebar.classList.contains('open')); sound.click(); });
+  if (sidebarClose && sidebar) sidebarClose.addEventListener('click', () => setDrawer(false));
   document.addEventListener('click', (e) => {
-    if (sidebar && window.innerWidth <= 960 && !sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
-      sidebar.classList.remove('open'); document.body.classList.remove('sidebar-open');
-    }
+    if (!sidebar || !sidebar.classList.contains('open')) return;
+    if (sidebar.contains(e.target) && !e.target.closest('a.side-link')) return;
+    if (menuBtn && menuBtn.contains(e.target)) return;
+    setDrawer(false);
   });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setDrawer(false); });
+  window.addEventListener('hashchange', () => setDrawer(false));
 
   if (profileBtn && profileMenu) {
     profileBtn.addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('hidden'); if (notifPanel) notifPanel.classList.add('hidden'); });
@@ -155,7 +172,7 @@ export function initShell() {
     if (invite) { discordLink.href = invite; } else { discordLink.style.display = 'none'; }
   }
 
-  on('me', () => { renderNav(); renderUserChip(); renderOnline(); renderNotifications(); });
+  on('me', () => { renderNav(); renderUserChip(); renderOnline(); renderNotifications(); applyBrand(document); });
   on('notifications', () => renderNotifications());
   on('online', () => renderOnline());
   on('socket:connected', () => {});

@@ -7,6 +7,8 @@ import { toast, countUp, installTilt } from './core/ui.js';
 import { initSound } from './core/sound.js';
 import { initShell, renderNav, renderUserChip, setActiveNav } from './core/shell.js';
 import { initSocket } from './core/socket.js';
+import { applyBrand } from './core/brand.js';
+import { openMemberCard } from './core/member-card.js';
 
 const routes = {};
 let currentView = null;
@@ -47,7 +49,7 @@ async function loadPublicConfig() {
 
 function applyPublic(cfg) {
   const org = cfg.org || {};
-  document.querySelectorAll('.org-name').forEach((el) => { el.textContent = org.name || 'كورتاس'; });
+  applyBrand(document);
   const desc = document.getElementById('hero-desc');
   if (desc && org.description) desc.textContent = org.description;
   const motto = document.getElementById('landing-motto');
@@ -250,7 +252,7 @@ async function loadRoute(hash) {
     document.getElementById('landing').classList.add('hidden');
     document.getElementById('public-root').classList.remove('hidden');
     const mod = await (map[hash] ? map[hash]() : Promise.resolve({ render: () => {} }));
-    if (mod.render) mod.render(document.getElementById('public-root'));
+    if (mod.render) Promise.resolve(mod.render(document.getElementById('public-root'))).then(() => applyBrand(document.getElementById('public-root'))).catch(() => {});
     return;
   }
   document.getElementById('public-root').classList.add('hidden');
@@ -277,6 +279,12 @@ async function loadRoute(hash) {
 function loadViews() {
   // Preload common views
 }
+
+document.addEventListener('click', (event) => {
+  if (event.target.closest('button, select, input, textarea, a')) return;
+  const el = event.target.closest('[data-member-id]');
+  if (el && el.dataset.memberId && state.authenticated) openMemberCard(el.dataset.memberId);
+});
 
 window.addEventListener('cortez:unauthorized', () => {
   const wasAuthenticated = state.authenticated;

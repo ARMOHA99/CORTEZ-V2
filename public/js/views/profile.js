@@ -17,7 +17,7 @@ export async function render(root) {
             <div class="avatar-lg">${card.user?.avatar?`<img src="https://cdn.discordapp.com/avatars/${card.user.discordId}/${card.user.avatar}.png?size=256" />`:`<span>${esc((card.user?.name||'ك').charAt(0))}</span>`}</div>
             <div>
               <h3>${esc(card.user?.name||'')}</h3>
-              <p>${esc(card.rank?.name||'')} • ${esc(card.org||'كورتاس')}</p>
+              <p>${esc(card.rank?.name||'')} • ${esc(card.org||'CORTEZ')}</p>
             </div>
           </div>
           <div class="mc-stats">

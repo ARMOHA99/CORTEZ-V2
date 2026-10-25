@@ -12,7 +12,7 @@ export async function render(root) {
     root.innerHTML = `
       <div class="public-shell">
         <div class="public-top">
-          <a href="/" class="brand"><span class="brand-sigil">✞</span><span class="brand-copy"><strong class="org-name">كورتاس</strong><small>CORTEZ</small></span></a>
+          <a href="/" class="brand"><span class="brand-sigil">C</span><span class="brand-copy"><strong class="org-name">CORTEZ</strong></span></a>
           <div class="row">
             <a href="#/track" class="btn btn-ghost btn-sm">تتبّع طلب</a>
             <a href="/" class="btn btn-ghost btn-sm">العودة للرئيسية</a>

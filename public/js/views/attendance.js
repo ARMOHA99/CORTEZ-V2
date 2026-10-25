@@ -23,7 +23,7 @@ export async function render(root) {
               ${(data.members||[]).length ? data.members.map(m => `
                 <tr>
                   <td>
-                    <div class="user-cell">
+                    <div class="user-cell" data-member-id="${esc(String(m._id||''))}">
                       <div class="avatar"><span>${esc((m.name||'ك').charAt(0))}</span></div>
                       <div><strong>${esc(m.name)}</strong><small style="color:${esc(m.rankColor)}">${esc(m.rankName)}</small></div>
                     </div>

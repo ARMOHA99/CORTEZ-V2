@@ -5,6 +5,7 @@ const publicConfig = require('../publicConfig');
 const { asyncHandler, httpError } = require('../utils/http');
 const ordersService = require('../services/orders');
 const realtime = require('../realtime');
+const settingsService = require('../services/settings');
 
 const router = express.Router();
 
@@ -13,10 +14,29 @@ function dbReady() {
   return mongoose.connection.readyState === 1;
 }
 
-router.get('/config', (req, res) => {
-  const payload = publicConfig(req);
-  res.json({ ...payload, release: release.version, serverTime: new Date().toISOString() });
-});
+router.get(
+  '/config',
+  asyncHandler(async (req, res) => {
+    const payload = publicConfig(req);
+    let settings = {};
+    try {
+      settings = await settingsService.getAll();
+    } catch (error) {
+      settings = {};
+    }
+    res.json({
+      ...payload,
+      org: {
+        ...(payload.org || {}),
+        name: settings['organization.name'] || 'CORTEZ',
+        logoUrl: settings['organization.logoUrl'] || ''
+      },
+      attendanceEnabled: settings['attendance.enabled'] !== false,
+      release: release.version,
+      serverTime: new Date().toISOString()
+    });
+  })
+);
 
 router.get('/version', (req, res) => {
   res.json({ release: release.version, at: release.builtAt });
