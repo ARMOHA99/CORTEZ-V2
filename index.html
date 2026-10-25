@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0c" />
+  <meta name="description" content="منصة منظمة كورتاس — عقد الدم، الدوام، العمليات، الخزينة، والمتجر. الإمبراطورية لا تُورَّث… تُنتزَع." />
+  <meta name="release" content="__RELEASE__" />
+  <meta name="csrf-token" content="__CSRF__" />
+  <title>CORTEZ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Cairo:wght@300;400;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%23e63946'%3EC%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/views.css" />
+</head>
+<body>
+  <div id="boot-screen" class="boot-screen">
+    <div class="boot-glow"></div>
+    <div class="boot-logo org-name">CORTEZ</div>
+    <div class="boot-line"><span></span></div>
+    <p class="boot-text">جارٍ فتح أبواب العائلة…</p>
+  </div>
+
+  <!-- ══════════════════════ الشاشة السينمائية للدخول ══════════════════════ -->
+  <div id="landing" class="landing hidden">
+    <div class="landing-bg" aria-hidden="true">
+      <div class="bg-vein vein-a"></div>
+      <div class="bg-vein vein-b"></div>
+      <div class="bg-vein vein-c"></div>
+      <div class="bg-glow glow-a"></div>
+      <div class="bg-glow glow-b"></div>
+      <div class="bg-grid"></div>
+      <div class="bg-noise"></div>
+      <div class="bg-scan"></div>
+    </div>
+    <div id="entry-beam" class="entry-beam" aria-hidden="true"></div>
+
+    <header class="landing-header">
+      <a href="/" class="brand-mini" aria-label="CORTEZ">
+        <span class="brand-sigil">C</span>
+        <span class="brand-text"><span class="org-name">CORTEZ</span></span>
+      </a>
+      <nav class="landing-nav">
+        <a href="#/shop" data-sound="click">المتجر الخارجي</a>
+        <a href="#/track" data-sound="click">تتبّع طلب</a>
+        <a id="discord-invite" href="#" target="_blank" rel="noopener" data-sound="click">ديسكورد</a>
+      </nav>
+    </header>
+
+    <main class="landing-main">
+      <div class="sigil-wrap" aria-hidden="true">
+        <div class="sigil-ring ring-1"></div>
+        <div class="sigil-ring ring-2"></div>
+        <div class="sigil-ring ring-3"></div>
+        <div class="sigil-mark">C</div>
+      </div>
+
+      <p class="eyebrow hero-eyebrow">CORTEZ CRIME SYNDICATE <span>•</span> LOS SANTOS</p>
+      <h1 class="hero-logo org-name" data-text="CORTEZ">CORTEZ</h1>
+      <p class="hero-tagline">الإمبراطورية لا تُورَّث… تُنتزَع</p>
+      <p class="hero-desc" id="hero-desc">
+        كورتاس ليست مجرد عائلة، بل كيان اقتصادي وعسكري يتحكم بشوارع لوس سانتوس من الظل.
+        انضم، أثبت ولاءك، واكتب اسمك بدمك في سجل الخالدين.
+      </p>
+
+      <div class="hero-actions">
+        <a id="login-btn" class="btn btn-primary btn-hero pulse-btn" href="/auth/discord">
+          <svg class="discord-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.32 4.37a19.8 19.8 0 0 0-4.93-1.52 13.8 13.8 0 0 0-.64 1.28 18.27 18.27 0 0 0-5.5 0 13.8 13.8 0 0 0-.64-1.28 19.74 19.74 0 0 0-4.93 1.52C.56 9.06-.3 13.63.13 18.14a19.9 19.9 0 0 0 6.04 3.06c.49-.67.92-1.38 1.29-2.12-.71-.27-1.39-.6-2.03-.99.17-.12.34-.25.5-.38a14.2 14.2 0 0 0 12.14 0c.17.13.33.26.5.38-.65.39-1.33.72-2.03.99.37.74.8 1.45 1.29 2.12a19.86 19.86 0 0 0 6.04-3.06c.51-5.22-.86-9.75-3.55-13.77ZM8.02 15.42c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.2 0 2.17 1.1 2.15 2.43 0 1.33-.95 2.42-2.15 2.42Zm7.96 0c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.2 0 2.17 1.1 2.15 2.43 0 1.33-.95 2.42-2.15 2.42Z"/></svg>
+          <span>إثبات الانتماء / تسجيل الدخول عبر Discord</span>
+          <span class="btn-shine"></span>
+        </a>
+        <a href="#/shop" class="btn btn-ghost btn-hero" data-sound="click">
+          <span>دخول المتجر الخارجي</span>
+          <span class="arrow">←</span>
+        </a>
+      </div>
+
+      <div id="landing-error" class="landing-error hidden" role="alert"></div>
+
+      <div class="landing-stats" id="landing-stats">
+        <div class="landing-stat"><strong data-stat="members">—</strong><span>عضو في العائلة</span></div>
+        <div class="landing-stat-sep"></div>
+        <div class="landing-stat"><strong data-stat="operations">—</strong><span>عملية مسجلة</span></div>
+        <div class="landing-stat-sep"></div>
+        <div class="landing-stat"><strong data-stat="online">—</strong><span>متصل الآن</span></div>
+      </div>
+
+      <div id="dev-login" class="dev-login hidden">
+        <p>دخول تجريبي سريع (بيئة التطوير فقط)</p>
+        <div class="dev-login-btns" id="dev-login-btns"></div>
+      </div>
+    </main>
+
+    <footer class="landing-footer">
+      <p id="landing-motto">الدم يوحّدنا، والولاء يخلّدنا</p>
+      <p class="tiny">© <span id="landing-year"></span> <span class="org-name">CORTEZ</span> — جميع الحقوق محفوظة. منصة غير رسمية لـ GTA Roleplay.</p>
+    </footer>
+  </div>
+
+  <!-- ══════════════════════ هيكل التطبيق ══════════════════════ -->
+  <div id="app" class="app hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <a href="#/dashboard" class="brand" data-sound="click">
+          <span class="brand-sigil">C</span>
+          <span class="brand-copy">
+            <strong class="org-name">CORTEZ</strong>
+          </span>
+        </a>
+        <button class="icon-btn sidebar-close" id="sidebar-close" aria-label="إغلاق القائمة">✕</button>
+      </div>
+
+      <button class="user-chip" id="sidebar-user" type="button" data-sound="click"></button>
+
+      <nav class="side-nav" id="side-nav" aria-label="التنقل الرئيسي"></nav>
+
+      <div class="sidebar-footer">
+        <a id="sidebar-discord" class="sidebar-link" href="#" target="_blank" rel="noopener">
+          <span class="nav-icon">◈</span><span>سيرفر ديسكورد</span>
+        </a>
+        <div class="sidebar-meta">
+          <span class="live-dot"></span>
+          <span id="sidebar-online">0</span> متصل
+          <span class="dot-sep">•</span>
+          <span id="release-label">v1</span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <header class="topbar">
+        <button class="menu-btn rooms-btn" id="menu-btn" type="button" aria-label="الرومات"><span class="rooms-ico">☰</span><span class="rooms-label">الرومات</span></button>
+        <div class="page-heading">
+          <p class="eyebrow" id="page-kicker">CORTEZ</p>
+          <h2 id="page-title">داشبورد</h2>
+        </div>
+        <div class="topbar-actions">
+          <div class="online-pill" title="الأعضاء المتصلون الآن">
+            <span class="live-dot"></span><span id="online-count">0</span>
+          </div>
+          <div class="notif-wrap">
+            <button class="icon-btn notif-btn" id="notif-btn" aria-label="الإشعارات">
+              <span class="bell">◉</span>
+              <span class="notif-badge hidden" id="notif-badge">0</span>
+            </button>
+            <div class="dropdown notif-panel hidden" id="notif-panel">
+              <div class="dropdown-head">
+                <strong>الإشعارات</strong>
+                <button class="link-btn" id="notif-read-all" type="button">تحديد الكل كمقروء</button>
+              </div>
+              <div class="dropdown-body" id="notif-list"></div>
+            </div>
+          </div>
+          <button class="avatar-btn" id="profile-btn" aria-label="ملفي">
+            <span class="avatar-ring"><img id="top-avatar" alt="" /></span>
+            <span class="avatar-copy">
+              <strong id="top-name">—</strong>
+              <small id="top-rank">—</small>
+            </span>
+          </button>
+          <div class="dropdown profile-menu hidden" id="profile-menu">
+            <a href="#/profile" data-sound="click">بطاقتي وملفي</a>
+            <a href="#/duty" data-sound="click">سجل الدوام</a>
+            <button type="button" id="sync-btn">مزامنة مع ديسكورد</button>
+            <button type="button" class="danger" id="logout-btn">إنهاء الجلسة</button>
+          </div>
+        </div>
+      </header>
+
+      <main id="view" class="view" tabindex="-1"></main>
+    </div>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="تنقل الجوال"></nav>
+  </div>
+
+  <!-- ══════════════════════ بوابة عقد الدم ══════════════════════ -->
+  <div id="pact-gate" class="pact-gate hidden" role="dialog" aria-modal="true" aria-labelledby="pact-title">
+    <div class="pact-backdrop"></div>
+    <div class="pact-frame">
+      <div class="pact-doc" id="pact-doc">
+        <div class="pact-top">
+          <span class="pact-mark">C</span>
+          <div>
+            <p class="eyebrow">BLOOD PACT • <span id="pact-version">V1</span></p>
+            <h2 id="pact-title">عقد الدم</h2>
+            <p class="pact-sub" id="pact-subtitle">وثيقة الولاء والانتماء</p>
+          </div>
+        </div>
+        <div class="pact-text" id="pact-text"></div>
+        <div class="pact-sign-zone">
+          <p class="pact-hint">اضغط مطولاً على البصمة لتوقيع العقد — <span id="pact-hold-label">3 ثوانٍ</span></p>
+          <div class="fingerprint-hold" id="pact-hold" role="button" tabindex="0" aria-label="توقيع عقد الدم">
+            <div class="fingerprint-fill"></div>
+            <div class="fingerprint-art" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <span class="fingerprint-label">بصمة الدم</span>
+          </div>
+          <button class="btn btn-primary" id="pact-sign-btn" type="button" hidden>توقيع العقد</button>
+          <p class="pact-warning">لا يمكنك الوصول إلى المنصة قبل التوقيع. الدم لا ينسى.</p>
+        </div>
+        <div class="pact-stamp hidden" id="pact-stamp">موقّع</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ عناصر عامة ══════════════════════ -->
+  <button id="sound-fab" class="sound-fab" type="button" aria-label="كتم الصوت" title="كتم / تشغيل الصوت">
+    <span class="sound-on">🔊</span><span class="sound-off">🔇</span>
+  </button>
+
+  <div id="modal-root" class="modal-root"></div>
+  <div id="toast-root" class="toast-root" aria-live="polite"></div>
+  <div id="public-root" class="public-root hidden"></div>
+  <div id="global-loading" class="global-loading hidden"><div class="loader-ring"></div></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
