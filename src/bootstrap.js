@@ -160,6 +160,17 @@ async function migrateItemPermissions() {
   try { require('./services/ranks').invalidate(); } catch (error) { /* ignore */ }
 }
 
+async function migrateShopOnlyRank() {
+  const Setting = require('./models/Setting');
+  const Rank = require('./models/Rank');
+  const done = await Setting.findOne({ key: 'migrations.shopOnlyV1' }).lean();
+  if (done) return;
+  await Rank.updateOne({ key: 'store' }, { $set: { permissions: ['store:view'] } });
+  await Rank.updateOne({ key: 'guest' }, { $pull: { permissions: 'store:view' } });
+  await Setting.updateOne({ key: 'migrations.shopOnlyV1' }, { $set: { key: 'migrations.shopOnlyV1', value: true } }, { upsert: true });
+  try { require('./services/ranks').invalidate(); } catch (error) { /* ignore */ }
+}
+
 async function seedSettings() {
   const Setting = require('./models/Setting');
   const defaults = settingsService.defaultSettings();
@@ -203,6 +214,7 @@ async function ensureSeed() {
   }
   await seedRanks();
   await migrateItemPermissions();
+  await migrateShopOnlyRank();
   await seedSettings();
   await seedProducts();
   await seedWelcomeAnnouncement();

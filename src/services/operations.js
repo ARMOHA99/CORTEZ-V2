@@ -1,7 +1,6 @@
 const config = require('../../config');
 const realtime = require('../realtime');
 const goalService = require('./goal');
-const treasuryService = require('./treasury');
 const discordService = require('./discord');
 
 function mongooseReady() {
@@ -129,44 +128,6 @@ async function createOperation({ data, user }) {
     refId: operation._id,
     user
   });
-
-  try {
-    if (result === 'win' && money > 0) {
-      await treasuryService.record({
-        type: 'income',
-        amount: money,
-        category: 'عمليات',
-        description: `دخل عملية ${code} — ${title}`,
-        refType: 'operation',
-        refId: operation._id,
-        user
-      });
-    }
-    if (result === 'loss' && money > 0) {
-      await treasuryService.record({
-        type: 'expense',
-        amount: money,
-        category: 'عمليات',
-        description: `خسارة نقدية في عملية ${code} — ${title}`,
-        refType: 'operation',
-        refId: operation._id,
-        user
-      });
-    }
-    if (lostValue > 0) {
-      await treasuryService.record({
-        type: 'expense',
-        amount: lostValue,
-        category: 'مفقودات',
-        description: `قيمة مفقودات عملية ${code} (${lost.length} صنف)`,
-        refType: 'operation',
-        refId: operation._id,
-        user
-      });
-    }
-  } catch (error) {
-    console.error('[Operations] treasury sync:', error.message);
-  }
 
   try {
     discordService.notifyOperation(operation.toJSON()).catch(() => null);

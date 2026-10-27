@@ -2,7 +2,7 @@
  * CORTEZ — نقطة الدخول والتوجيه
  */
 import { api, get, post, setCsrf } from './core/api.js';
-import { state, applyMe, reset, emit } from './core/state.js';
+import { state, applyMe, reset, emit, can } from './core/state.js';
 import { toast, countUp, installTilt } from './core/ui.js';
 import { initSound } from './core/sound.js';
 import { initShell, renderNav, renderUserChip, setActiveNav } from './core/shell.js';
@@ -27,15 +27,21 @@ export function navigate(hash) {
   location.hash = hash;
 }
 
+/* عميل المتجر: يملك store:view ولا يملك أي صلاحية أخرى للغرف (لا داشبورد ولا غيره) */
+function isShopOnly() {
+  return can('store:view') && !can('dashboard:view');
+}
+
+function homeRoute() {
+  return isShopOnly() ? '#/shop' : '#/dashboard';
+}
+
 function getHash() {
-  return location.hash || '#/dashboard';
+  return location.hash || (state.authenticated ? homeRoute() : '#/dashboard');
 }
 
 /* صفحات متاحة للزوار قبل تسجيل الدخول (المتجر الخارجي وتتبّع الطلب) */
-const PUBLIC_VIEWS = {
-  '#/shop': () => import('./views/public-shop.js'),
-  '#/track': () => import('./views/public-track.js')
-};
+const PUBLIC_VIEWS = {};
 let appInitialized = false;
 
 function publicBase() {
@@ -299,24 +305,19 @@ async function loadRoute(hash) {
     '#/announcements': () => import('./views/announcements.js'),
     '#/admin': () => import('./views/admin.js'),
     '#/profile': () => import('./views/profile.js'),
-    '#/shop': () => import('./views/public-shop.js'),
-    '#/track': () => import('./views/public-track.js')
+    '#/shop': () => import('./views/shop.js')
   };
-  // public routes
-  if (hash.split('?')[0] === '#/shop' || hash.split('?')[0] === '#/track') {
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('landing').classList.add('hidden');
-    document.getElementById('public-root').classList.remove('hidden');
-    const mod = await (map[hash.split('?')[0]] ? map[hash.split('?')[0]]() : Promise.resolve({ render: () => {} }));
-    if (mod.render) Promise.resolve(mod.render(document.getElementById('public-root'))).then(() => applyBrand(document.getElementById('public-root'))).catch(() => {});
-    return;
-  }
   document.getElementById('public-root').classList.add('hidden');
   if (!state.authenticated) {
     navigate('#/dashboard');
     return;
   }
-  const loader = map[hash] || map['#/dashboard'];
+  // عميل المتجر لا يرى إلا المتجر وطلباته وملفه
+  if (isShopOnly() && !['#/shop', '#/orders', '#/profile'].includes(hash.split('?')[0])) {
+    navigate('#/shop');
+    return;
+  }
+  const loader = map[hash.split('?')[0]] || map[homeRoute()];
   try {
     const mod = await loader();
     viewEl.innerHTML = '';

@@ -80,71 +80,12 @@ router.get(
   })
 );
 
-router.get(
-  '/products',
-  asyncHandler(async (req, res) => {
-    if (!config.features.publicStore) return res.json({ items: [], store: { open: false } });
-    if (!dbReady()) return res.json({ items: [], store: { open: false } });
-    const storeSettings = await settingsService.getAll().catch(() => ({}));
-    const store = {
-      open: storeSettings['store.externalEnabled'] !== false,
-      title: storeSettings['store.externalTitle'] || 'المتجر الخارجي',
-      description: storeSettings['store.externalDescription'] || ''
-    };
-    if (!store.open) return res.json({ items: [], store });
-    const Product = require('../models/Product');
-    const items = await Product.find({ active: true, scope: { $in: ['external', 'both'] } })
-      .select('name sku description category price image stock featured order')
-      .sort({ order: 1, createdAt: 1 })
-      .lean();
-    res.json({
-      store,
-      items: items.map((item) => ({
-        ...item,
-        price: Number(item.price) || 0,
-        available: item.stock === null || item.stock === undefined || item.stock > 0
-      }))
-    });
-  })
-);
-
-router.post(
-  '/orders',
-  asyncHandler(async (req, res) => {
-    if (!config.features.publicStore || !config.features.guestOrders) {
-      throw httpError(403, 'المتجر الخارجي مغلق حالياً', 'STORE_CLOSED');
-    }
-    if ((await settingsService.get('store.externalEnabled', true)) === false) {
-      throw httpError(403, 'المتجر الخارجي مغلق حالياً من الإدارة', 'STORE_CLOSED');
-    }
-    const { customer, items, note } = req.body || {};
-    const order = await ordersService.createOrder({
-      type: 'external',
-      customer: customer || {},
-      items: items || [],
-      note,
-      req
-    });
-    res.status(201).json({
-      ok: true,
-      order: {
-        code: order.code,
-        total: order.total,
-        status: order.status,
-        items: order.items,
-        createdAt: order.createdAt
-      }
-    });
-  })
-);
-
-router.get(
-  '/orders/:code',
-  asyncHandler(async (req, res) => {
-    const order = await ordersService.findByCode(req.params.code);
-    if (!order) throw httpError(404, 'لم نجد طلباً بهذا الرقم', 'NOT_FOUND');
-    res.json({ order: ordersService.serializePublic(order) });
-  })
-);
+/* المتجر الخارجي لم يعد عاماً: يلزم تسجيل الدخول برتبة تملك صلاحية المتجر (store:view) */
+router.use(['/products', '/orders'], (req, res) => {
+  res.status(401).json({
+    error: 'المتجر الخارجي لحاملي رول المتجر فقط. سجّل الدخول عبر ديسكورد.',
+    code: 'SHOP_LOGIN_REQUIRED'
+  });
+});
 
 module.exports = router;

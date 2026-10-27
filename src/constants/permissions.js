@@ -139,7 +139,7 @@ const RANKS = [
     icon: '▣',
     isSystem: true,
     order: 5,
-    permissions: ['dashboard:view', 'store:view', 'store:internal', 'orders:view', 'leaderboard:view']
+    permissions: ['store:view']
   },
   {
     key: 'guest',

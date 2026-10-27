@@ -29,6 +29,7 @@ const NAV = [
   ]},
   { group: 'الخدمات', items: [
     { id: 'store', label: 'المتجر الداخلي', icon: '■', route: '#/store-internal', perm: 'store:internal' },
+    { id: 'shop', label: 'المتجر الخارجي', icon: '▣', route: '#/shop', perm: 'store:view' },
     { id: 'orders', label: 'الطلبات', icon: '▢', route: '#/orders' },
     { id: 'announcements', label: 'الإعلانات', icon: '◔', route: '#/announcements' }
   ]},
@@ -38,6 +39,8 @@ const NAV = [
 ];
 
 function visibleItem(item) {
+  // عميل المتجر: لا يرى إلا المتجر والطلبات
+  if (can('store:view') && !can('dashboard:view')) return ['shop', 'orders'].includes(item.id);
   if (item.perm && !can(item.perm)) return false;
   if (item.anyPerm && !item.anyPerm.some((perm) => can(perm))) return false;
   return true;

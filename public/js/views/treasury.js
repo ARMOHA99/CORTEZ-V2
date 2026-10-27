@@ -48,26 +48,6 @@ function balanceChart(transactions, currentBalance) {
   </svg>`;
 }
 
-/* أعمدة الدخل والمصروف اليومية */
-function dailyBars(series) {
-  const rows = (series || []).slice(-21);
-  if (!rows.length) return '<p class="muted">لا توجد حركات في آخر 30 يومًا.</p>';
-  const W = 800;
-  const H = 200;
-  const pad = { l: 16, r: 16, t: 10, b: 26 };
-  const max = Math.max(...rows.map((r) => Math.max(r.income || 0, r.expense || 0)), 1);
-  const slot = (W - pad.l - pad.r) / rows.length;
-  const bw = Math.min(16, slot / 2.6);
-  const h = (v) => ((v || 0) / max) * (H - pad.t - pad.b);
-  const bars = rows.map((r, i) => {
-    const cx = pad.l + slot * i + slot / 2;
-    return `<g><rect x="${(cx - bw - 1).toFixed(1)}" y="${(H - pad.b - h(r.income)).toFixed(1)}" width="${bw}" height="${h(r.income).toFixed(1)}" rx="3" fill="#7ff0b0"><title>دخل ${num(r.income || 0)} • ${esc(r.day)}</title></rect>
-      <rect x="${(cx + 1).toFixed(1)}" y="${(H - pad.b - h(r.expense)).toFixed(1)}" width="${bw}" height="${h(r.expense).toFixed(1)}" rx="3" fill="#ff8a94"><title>مصروف ${num(r.expense || 0)} • ${esc(r.day)}</title></rect>
-      <text x="${cx.toFixed(1)}" y="${H - 8}" fill="#9b9296" font-size="10" text-anchor="middle">${esc(String(r.day).slice(5))}</text></g>`;
-  }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="الدخل والمصروف اليومي" style="display:block">${bars}</svg>`;
-}
-
 export async function render(root) {
   root.innerHTML = '<div class="view-loading"><div class="loader-ring"></div></div>';
   try {
@@ -87,12 +67,6 @@ export async function render(root) {
           <div class="muted" style="font-size:12px"><span style="color:#7ff0b0">●</span> إيداع &nbsp; <span style="color:#ff8a94">●</span> سحب</div></div>
         <div class="card-body">${balanceChart(t.transactions, t.balance)}</div>
       </div>
-      <div class="card" style="margin-top:18px">
-        <div class="card-head"><div><p class="eyebrow">DAILY</p><h3>الدخل والمصروف اليومي</h3></div>
-          <div class="muted" style="font-size:12px"><span style="color:#7ff0b0">■</span> دخل &nbsp; <span style="color:#ff8a94">■</span> مصروف</div></div>
-        <div class="card-body">${dailyBars(t.series)}</div>
-      </div>
-
       <div class="grid grid-3" style="margin-top:18px">
         <div class="card" style="grid-column:span 2">
           <div class="card-head"><div><p class="eyebrow">LEDGER</p><h3>سجل الحركات</h3></div></div>

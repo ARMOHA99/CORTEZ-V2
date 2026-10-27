@@ -542,7 +542,7 @@ async function tabStore(box) {
   box.innerHTML = `
     <div class="adm-grid" style="margin-bottom:16px">
       <div class="card"><div class="card-body adm-form">
-        <h3>المتجر الخارجي (للزوار)</h3>
+        <h3>المتجر الخارجي (لحاملي رول المتجر)</h3>
         ${canSettings ? `
           ${sw('extOpen', 'المتجر الخارجي مفتوح للطلبات', s['store.externalEnabled'] !== false)}
           <label>عنوان صفحة المتجر<input type="text" id="ext-title" value="${esc(s['store.externalTitle'] || 'المتجر الخارجي')}" maxlength="80" /></label>
@@ -553,7 +553,7 @@ async function tabStore(box) {
           <button class="btn btn-ghost btn-sm" id="ext-orders" type="button">إدارة الطلبات</button>
         </div>
         ${pendingExternal === null ? '' : `<p class="adm-note">طلبات خارجية: ${num(totalExternal)} • قيد الانتظار: <strong>${num(pendingExternal)}</strong></p>`}
-        <p class="adm-note">المنتج يظهر في المتجر الخارجي إذا كان «يظهر في» = خارجي أو خارجي وداخلي، وكان مفعّلًا.</p>
+        <p class="adm-note">لا يدخل المتجر الخارجي إلا من سجّل الدخول وتملك رتبته صلاحية «عرض المتجر الخارجي». رتبة «متجر» (المربوطة برول المتجر في ديسكورد) تُدخل العميل إلى المتجر وطلباته فقط، دون الداشبورد أو بقية الغرف. المنتج يظهر إذا كان «يظهر في» = خارجي أو خارجي وداخلي، وكان مفعّلًا.</p>
       </div></div>
       <div class="card"><div class="card-body adm-form">
         <h3>المتجر الداخلي (للأعضاء فقط)</h3>
