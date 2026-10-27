@@ -521,10 +521,46 @@ function openProductModal(product, reload) {
   });
 }
 
+async function saveSettingEntries(entries) {
+  await patch('/api/admin/settings', { entries: Object.entries(entries).map(([key, value]) => ({ key, value })) });
+}
+
 async function tabStore(box) {
   const data = await get('/api/products?all=1');
   const items = data.items || [];
+  let s = {};
+  const canSettings = can('settings:manage');
+  if (canSettings) { try { s = (await get('/api/admin/settings')).settings || {}; } catch (e) { s = {}; } }
+  let pendingExternal = null;
+  let totalExternal = null;
+  try {
+    const pend = await get('/api/orders?all=1&type=external&status=pending&limit=1');
+    const all = await get('/api/orders?all=1&type=external&limit=1');
+    pendingExternal = pend.total; totalExternal = all.total;
+  } catch (e) { /* لا صلاحية لعرض الطلبات */ }
+
   box.innerHTML = `
+    <div class="adm-grid" style="margin-bottom:16px">
+      <div class="card"><div class="card-body adm-form">
+        <h3>المتجر الخارجي (للزوار)</h3>
+        ${canSettings ? `
+          ${sw('extOpen', 'المتجر الخارجي مفتوح للطلبات', s['store.externalEnabled'] !== false)}
+          <label>عنوان صفحة المتجر<input type="text" id="ext-title" value="${esc(s['store.externalTitle'] || 'المتجر الخارجي')}" maxlength="80" /></label>
+          <label>وصف قصير<input type="text" id="ext-desc" value="${esc(s['store.externalDescription'] || '')}" maxlength="240" /></label>
+          <div class="adm-actions"><button class="btn btn-primary btn-sm" id="ext-save" type="button">حفظ إعدادات المتجر الخارجي</button></div>` : '<p class="adm-note">لا تملك صلاحية تعديل إعدادات المتجر.</p>'}
+        <div class="adm-actions">
+          <button class="btn btn-ghost btn-sm" id="ext-open" type="button">فتح المتجر الخارجي ↗</button>
+          <button class="btn btn-ghost btn-sm" id="ext-orders" type="button">إدارة الطلبات</button>
+        </div>
+        ${pendingExternal === null ? '' : `<p class="adm-note">طلبات خارجية: ${num(totalExternal)} • قيد الانتظار: <strong>${num(pendingExternal)}</strong></p>`}
+        <p class="adm-note">المنتج يظهر في المتجر الخارجي إذا كان «يظهر في» = خارجي أو خارجي وداخلي، وكان مفعّلًا.</p>
+      </div></div>
+      <div class="card"><div class="card-body adm-form">
+        <h3>المتجر الداخلي (للأعضاء فقط)</h3>
+        ${canSettings ? sw('intOpen', 'المتجر الداخلي مفتوح للأعضاء', s['store.internalEnabled'] !== false) : ''}
+        <p class="adm-note">يطلب منه الأعضاء الذين يملكون صلاحية «طلب العتاد من المتجر الداخلي». تظهر طلباتهم في غرفة «الطلبات» تحت تبويب المتجر الداخلي.</p>
+      </div></div>
+    </div>
     <div class="adm-actions" style="margin-bottom:14px"><button class="btn btn-primary" id="pr-new" type="button">+ منتج جديد</button></div>
     <div class="card"><div class="card-body" style="overflow-x:auto">
       ${items.length ? `<table class="table"><thead><tr><th>المنتج</th><th>الفئة</th><th>السعر</th><th>المخزون</th><th>يظهر في</th><th>الحالة</th><th></th></tr></thead><tbody>
@@ -542,6 +578,25 @@ async function tabStore(box) {
       </tbody></table>` : emptyState('لا منتجات', 'أضف أول منتج')}
     </div></div>`;
   const reload = () => tabStore(box).catch((e) => { box.innerHTML = errBox(e); });
+  box.querySelector('#ext-open').addEventListener('click', () => window.open(location.origin + '/#/shop', '_blank'));
+  box.querySelector('#ext-orders').addEventListener('click', () => { location.hash = '#/orders'; });
+  const extSave = box.querySelector('#ext-save');
+  if (extSave) {
+    extSave.addEventListener('click', async () => {
+      try {
+        await saveSettingEntries({
+          'store.externalEnabled': box.querySelector('[name="extOpen"]').checked,
+          'store.externalTitle': box.querySelector('#ext-title').value.trim() || 'المتجر الخارجي',
+          'store.externalDescription': box.querySelector('#ext-desc').value.trim()
+        });
+        sound.success(); toast('تم حفظ إعدادات المتجر الخارجي', 'success');
+      } catch (e) { sound.error(); toast(e.message, 'danger'); }
+    });
+    box.querySelector('[name="intOpen"]').addEventListener('change', async (event) => {
+      try { await saveSettingEntries({ 'store.internalEnabled': event.target.checked }); toast(event.target.checked ? 'فُتح المتجر الداخلي' : 'أُغلق المتجر الداخلي', 'success'); }
+      catch (e) { toast(e.message, 'danger'); event.target.checked = !event.target.checked; }
+    });
+  }
   box.querySelector('#pr-new').addEventListener('click', () => openProductModal(null, reload));
   box.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openProductModal(items.find((p) => idOf(p) === b.dataset.edit), reload)));
   box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {

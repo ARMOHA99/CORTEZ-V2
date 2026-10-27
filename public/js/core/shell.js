@@ -17,6 +17,7 @@ const NAV = [
   ]},
   { group: 'العمليات', items: [
     { id: 'operations', label: 'غرفة العمليات', icon: '⚔', route: '#/operations', perm: 'operations:view' },
+    { id: 'items', label: 'غرفة الأيتمات', icon: '◫', route: '#/items', perm: 'items:view' },
     { id: 'treasury', label: 'الخزينة', icon: '$', route: '#/treasury', perm: 'treasury:view' },
     { id: 'votes', label: 'التصويتات', icon: '⚖', route: '#/votes', perm: 'votes:view' }
   ]},

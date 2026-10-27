@@ -149,6 +149,17 @@ async function seedRanks() {
   }
 }
 
+async function migrateItemPermissions() {
+  const Setting = require('./models/Setting');
+  const Rank = require('./models/Rank');
+  const done = await Setting.findOne({ key: 'migrations.itemsPermsV1' }).lean();
+  if (done) return;
+  await Rank.updateOne({ key: 'business' }, { $addToSet: { permissions: { $each: ['items:view', 'items:manage'] } } });
+  await Rank.updateOne({ key: 'operations' }, { $addToSet: { permissions: { $each: ['items:view'] } } });
+  await Setting.updateOne({ key: 'migrations.itemsPermsV1' }, { $set: { key: 'migrations.itemsPermsV1', value: true } }, { upsert: true });
+  try { require('./services/ranks').invalidate(); } catch (error) { /* ignore */ }
+}
+
 async function seedSettings() {
   const Setting = require('./models/Setting');
   const defaults = settingsService.defaultSettings();
@@ -191,6 +202,7 @@ async function ensureSeed() {
     return { skipped: true };
   }
   await seedRanks();
+  await migrateItemPermissions();
   await seedSettings();
   await seedProducts();
   await seedWelcomeAnnouncement();

@@ -21,12 +21,18 @@ router.get(
     const wantAll = req.query.all === '1' && canSeeAll;
     const query = wantAll ? {} : { user: req.user._id };
     if (req.query.status) query.status = String(req.query.status);
+    if (wantAll && ['external', 'internal'].includes(String(req.query.type || ''))) query.type = String(req.query.type);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 40));
     const page = Math.max(1, Number(req.query.page) || 1);
-    const [items, total] = await Promise.all([
-      Order.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    const [rows, total] = await Promise.all([
+      Order.find(query).populate('user', 'displayName username').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       Order.countDocuments(query)
     ]);
+    const items = rows.map((order) => ({
+      ...order,
+      userName: order.user ? order.user.displayName || order.user.username || '' : '',
+      user: order.user ? order.user._id : null
+    }));
     res.json({ items, total, page, canSeeAll });
   })
 );
@@ -36,6 +42,9 @@ router.post(
   requireAuth,
   requirePermission('store:internal'),
   asyncHandler(async (req, res) => {
+    if ((await require('../services/settings').get('store.internalEnabled', true)) === false) {
+      throw httpError(403, 'المتجر الداخلي مغلق حالياً من الإدارة', 'STORE_CLOSED');
+    }
     const order = await ordersService.createOrder({
       type: 'internal',
       user: req.user,

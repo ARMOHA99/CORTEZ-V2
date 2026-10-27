@@ -379,7 +379,10 @@ async function attendanceGrid(requestedWeekKey = null) {
     if (!cellMap.has(key)) cellMap.set(key, new Map());
     const dayMap = cellMap.get(key);
     const minutes = shift.status === 'closed' ? Math.max(0, shift.totalMinutes || 0) : liveMinutes(shift);
-    dayMap.set(shift.dateKey, (dayMap.get(shift.dateKey) || 0) + minutes);
+    const entry = dayMap.get(shift.dateKey) || { minutes: 0, live: false };
+    entry.minutes += minutes;
+    if (shift.status !== 'closed') entry.live = true; // دوام جارٍ الآن = حاضر حتى لو لم تكتمل الدقيقة
+    dayMap.set(shift.dateKey, entry);
   }
 
   let present = 0;
@@ -387,8 +390,9 @@ async function attendanceGrid(requestedWeekKey = null) {
   const members = users.map((user) => {
     const dayMap = cellMap.get(String(user._id)) || new Map();
     const cells = weekDays.map((key) => {
-      const minutes = dayMap.get(key) || 0;
-      const isPresent = minutes > 0;
+      const entry = dayMap.get(key) || { minutes: 0, live: false };
+      const minutes = entry.minutes;
+      const isPresent = minutes > 0 || entry.live;
       if (isPresent) present += 1;
       else absent += 1;
       return { dateKey: key, present: isPresent, minutes };
@@ -414,6 +418,7 @@ async function attendanceGrid(requestedWeekKey = null) {
     weekEnd: weekDays[6],
     weekDays,
     days: weekDays,
+    today: context.dateKey,
     members,
     stats: { present, absent, rate: present + absent ? Math.round((present / (present + absent)) * 100) : 0 }
   };

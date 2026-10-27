@@ -9,6 +9,7 @@ router.use('/duty', require('./duty'));
 router.use('/operations', require('./operations'));
 router.use('/treasury', require('./treasury'));
 router.use('/products', require('./products'));
+router.use('/items', require('./items'));
 router.use('/orders', require('./orders'));
 router.use('/members', require('./members'));
 router.use('/discipline', require('./discipline'));

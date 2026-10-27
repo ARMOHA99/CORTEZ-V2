@@ -18,9 +18,19 @@ function httpError(status, message, code = '') {
 
 async function normalizeItems(items = [], { allowPriceLookup = true } = {}) {
   const Product = require('../models/Product');
+  const Item = require('../models/Item');
   const normalized = [];
   for (const item of Array.isArray(items) ? items.slice(0, 40) : []) {
     const qty = Math.max(1, Math.min(1000000, Math.round(Number(item.qty) || 0)));
+    // السعر المعتمد يأتي من كتالوج الأيتمات الذي يضعه البزنس مانجر
+    let catalogItem = null;
+    if (item.itemId) catalogItem = await Item.findById(item.itemId).lean().catch(() => null);
+    if (!catalogItem && item.name) catalogItem = await Item.findOne({ name: String(item.name).trim() }).lean().catch(() => null);
+    if (catalogItem) {
+      const unit = Math.max(0, Math.round(Number(catalogItem.price) || 0));
+      normalized.push({ product: null, name: String(catalogItem.name).slice(0, 120), qty, unitPrice: unit, total: qty * unit });
+      continue;
+    }
     let product = null;
     if (item.productId) {
       product = await Product.findById(item.productId).lean().catch(() => null);

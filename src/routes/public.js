@@ -83,14 +83,22 @@ router.get(
 router.get(
   '/products',
   asyncHandler(async (req, res) => {
-    if (!config.features.publicStore) return res.json({ items: [] });
-    if (!dbReady()) return res.json({ items: [] });
+    if (!config.features.publicStore) return res.json({ items: [], store: { open: false } });
+    if (!dbReady()) return res.json({ items: [], store: { open: false } });
+    const storeSettings = await settingsService.getAll().catch(() => ({}));
+    const store = {
+      open: storeSettings['store.externalEnabled'] !== false,
+      title: storeSettings['store.externalTitle'] || 'المتجر الخارجي',
+      description: storeSettings['store.externalDescription'] || ''
+    };
+    if (!store.open) return res.json({ items: [], store });
     const Product = require('../models/Product');
     const items = await Product.find({ active: true, scope: { $in: ['external', 'both'] } })
       .select('name sku description category price image stock featured order')
       .sort({ order: 1, createdAt: 1 })
       .lean();
     res.json({
+      store,
       items: items.map((item) => ({
         ...item,
         price: Number(item.price) || 0,
@@ -105,6 +113,9 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!config.features.publicStore || !config.features.guestOrders) {
       throw httpError(403, 'المتجر الخارجي مغلق حالياً', 'STORE_CLOSED');
+    }
+    if ((await settingsService.get('store.externalEnabled', true)) === false) {
+      throw httpError(403, 'المتجر الخارجي مغلق حالياً من الإدارة', 'STORE_CLOSED');
     }
     const { customer, items, note } = req.body || {};
     const order = await ordersService.createOrder({

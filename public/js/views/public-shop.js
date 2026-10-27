@@ -9,6 +9,7 @@ export async function render(root) {
   root.innerHTML = '<div class="view-loading"><div class="loader-ring"></div></div>';
   try {
     const data = await get('/api/public/products');
+    const store = data.store || { open: true, title: 'المتجر الخارجي', description: '' };
     root.innerHTML = `
       <div class="public-shell">
         <div class="public-top">
@@ -20,11 +21,11 @@ export async function render(root) {
         </div>
         <div class="public-hero">
           <p class="eyebrow">PUBLIC STORE</p>
-          <h1>المتجر الخارجي</h1>
-          <p>يمكن للجميع تقديم طلب عبر هذا المتجر</p>
+          <h1>${esc(store.title || 'المتجر الخارجي')}</h1>
+          <p>${esc(store.description || '')}</p>
         </div>
         <div class="store-grid">
-          ${(data.items||[]).length ? data.items.map(p => `
+          ${store.open === false ? emptyState('المتجر مغلق حالياً', 'عاود المحاولة لاحقاً') : (data.items||[]).length ? data.items.map(p => `
             <div class="product-card">
               <div class="product-media">${p.image ? `<img src="${esc(p.image)}" alt="" />` : `<span class="ph">■</span>`}</div>
               <div class="product-body">
@@ -32,11 +33,11 @@ export async function render(root) {
                 <p>${esc(p.description||'')}</p>
                 <div class="product-foot">
                   <div class="price">${num(p.price)} <small>دولار</small></div>
-                  <button class="btn btn-sm btn-primary" data-add="${p._id}" data-name="${esc(p.name)}" data-price="${p.price}">أضف</button>
+                  ${p.available === false ? '<span class="badge danger">نفدت الكمية</span>' : `<button class="btn btn-sm btn-primary" data-add="${p._id}" data-name="${esc(p.name)}" data-price="${p.price}">أضف</button>`}
                 </div>
               </div>
             </div>
-          `).join('') : emptyState('المتجر مغلق أو فارغ', '')}
+          `).join('') : emptyState('لا منتجات حالياً', 'لم تُضف منتجات للمتجر الخارجي بعد')}
         </div>
         <button class="cart-fab" id="cart-fab"><span>🛒</span> السلة <span class="count" id="cart-count">0</span></button>
       </div>

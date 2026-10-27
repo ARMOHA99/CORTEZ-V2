@@ -38,6 +38,8 @@ function defaultSettings() {
     'system.announcementBanner': '',
     'system.attendanceVisibleRanks': ['owner', 'operations', 'business', 'member', 'store'],
     'store.externalEnabled': config.features.publicStore,
+    'store.externalTitle': 'المتجر الخارجي',
+    'store.externalDescription': 'يمكن للجميع تقديم طلب عبر هذا المتجر',
     'store.internalEnabled': config.features.internalStore,
     'leaderboard.public': false,
     'discipline.discordNotify': true,

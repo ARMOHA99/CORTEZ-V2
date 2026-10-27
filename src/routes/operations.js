@@ -28,7 +28,16 @@ router.get(
   requirePermission('operations:view'),
   asyncHandler(async (req, res) => {
     const stats = await operationsService.operationStats();
-    res.json({ stats });
+    const goalService = require('../services/goal');
+    let goal = null;
+    try {
+      const context = await goalService.weekContext();
+      const goalData = await goalService.getCurrentGoal({ create: true });
+      goal = goalService.serializeGoal(goalData.goal, context);
+    } catch (error) {
+      goal = null;
+    }
+    res.json({ stats, goal });
   })
 );
 

@@ -84,7 +84,7 @@ async function build(userId, viewer = null) {
       signedAt: user.bloodPact ? user.bloodPact.signedAt : null
     },
     motto: config.org.motto,
-    org: config.org.name,
+    org: 'CORTEZ',
     generatedAt: new Date().toISOString()
   };
 }

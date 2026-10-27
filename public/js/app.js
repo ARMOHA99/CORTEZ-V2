@@ -31,6 +31,50 @@ function getHash() {
   return location.hash || '#/dashboard';
 }
 
+/* صفحات متاحة للزوار قبل تسجيل الدخول (المتجر الخارجي وتتبّع الطلب) */
+const PUBLIC_VIEWS = {
+  '#/shop': () => import('./views/public-shop.js'),
+  '#/track': () => import('./views/public-track.js')
+};
+let appInitialized = false;
+
+function publicBase() {
+  return (location.hash || '').split('?')[0];
+}
+
+async function renderPublicRoute() {
+  const loader = PUBLIC_VIEWS[publicBase()];
+  if (!loader) return;
+  document.getElementById('boot-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('pact-gate').classList.add('hidden');
+  const root = document.getElementById('public-root');
+  root.classList.remove('hidden');
+  try {
+    const mod = await loader();
+    if (mod.render) await mod.render(root);
+    applyBrand(root);
+  } catch (error) {
+    root.innerHTML = '<div class="public-shell"><div class="card"><h3>خطأ</h3><p class="muted">تعذّر فتح الصفحة.</p></div></div>';
+  }
+}
+
+/* مستمع واحد للتنقل: يعمل للزائر وللعضو معاً */
+function onAnyHashChange() {
+  if (PUBLIC_VIEWS[publicBase()]) {
+    renderPublicRoute();
+    return;
+  }
+  document.getElementById('public-root').classList.add('hidden');
+  if (state.authenticated && appInitialized) {
+    document.getElementById('app').classList.remove('hidden');
+    onHashChange();
+  } else if (!state.authenticated) {
+    showLanding();
+  }
+}
+
 async function loadPublicConfig() {
   try {
     const data = await get('/api/public/config');
@@ -183,6 +227,7 @@ async function initPact() {
 
 async function boot() {
   initSound();
+  window.addEventListener('hashchange', onAnyHashChange);
   await loadPublicConfig();
   const params = new URLSearchParams(location.search);
   if (params.get('error')) {
@@ -211,6 +256,7 @@ async function boot() {
   } catch (e) {
     state.booted = true;
     showLanding();
+    if (PUBLIC_VIEWS[publicBase()]) renderPublicRoute();
   }
   setTimeout(() => document.getElementById('boot-screen').classList.add('hidden'), 400);
 }
@@ -219,7 +265,7 @@ function initApp() {
   renderNav();
   renderUserChip();
   initSocket();
-  window.addEventListener('hashchange', onHashChange);
+  appInitialized = true;
   onHashChange();
 }
 
@@ -241,6 +287,7 @@ async function loadRoute(hash) {
     '#/attendance': () => import('./views/attendance.js'),
     '#/operations': () => import('./views/operations.js'),
     '#/treasury': () => import('./views/treasury.js'),
+    '#/items': () => import('./views/items.js'),
     '#/store-internal': () => import('./views/store.js'),
     '#/orders': () => import('./views/orders.js'),
     '#/members': () => import('./views/members.js'),
@@ -256,11 +303,11 @@ async function loadRoute(hash) {
     '#/track': () => import('./views/public-track.js')
   };
   // public routes
-  if (hash === '#/shop' || hash === '#/track') {
+  if (hash.split('?')[0] === '#/shop' || hash.split('?')[0] === '#/track') {
     document.getElementById('app').classList.add('hidden');
     document.getElementById('landing').classList.add('hidden');
     document.getElementById('public-root').classList.remove('hidden');
-    const mod = await (map[hash] ? map[hash]() : Promise.resolve({ render: () => {} }));
+    const mod = await (map[hash.split('?')[0]] ? map[hash.split('?')[0]]() : Promise.resolve({ render: () => {} }));
     if (mod.render) Promise.resolve(mod.render(document.getElementById('public-root'))).then(() => applyBrand(document.getElementById('public-root'))).catch(() => {});
     return;
   }
