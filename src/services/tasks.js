@@ -52,6 +52,14 @@ async function tickSync() {
   }
 }
 
+async function tickSyncAll() {
+  try {
+    await syncService.syncAllUsers();
+  } catch (error) {
+    console.error('[Tasks] sync-all:', error.message);
+  }
+}
+
 function startTasks() {
   if (running) return;
   running = true;
@@ -60,6 +68,8 @@ function startTasks() {
   timers.push(setInterval(tickGoal, 4 * 60 * 1000));
   timers.push(setInterval(tickPresence, 60 * 1000));
   timers.push(setInterval(tickSync, 120 * 1000));
+  timers.push(setInterval(tickSyncAll, 10 * 60 * 1000));
+  setTimeout(tickSyncAll, 20 * 1000);
   setTimeout(tickGoal, 4000);
   setTimeout(tickVotes, 8000);
   setTimeout(tickPresence, 12000);

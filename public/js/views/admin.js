@@ -6,6 +6,7 @@ import { get, post, patch, del, upload } from '../core/api.js';
 import { state, can } from '../core/state.js';
 import { esc, num, pageHeader, openModal, confirmDialog, promptDialog, toast, debounce, timeAgo, emptyState, badge, statusBadge } from '../core/ui.js';
 import { applyBrand } from '../core/brand.js';
+import { mountPicker } from '../core/picker.js';
 import * as sound from '../core/sound.js';
 
 export const meta = { title: 'لوحة الإدارة', kicker: 'ADMIN' };
@@ -157,6 +158,7 @@ async function tabSettings(box) {
           <button class="btn btn-ghost btn-sm" type="button" id="bot-refresh">فحص البوت</button>
           <button class="btn btn-ghost btn-sm" type="button" id="bot-commands">إعادة تسجيل أوامر / (مثل /card)</button>
           <button class="btn btn-ghost btn-sm" type="button" id="bot-sync-check">فحص مزامنة حسابي</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="bot-sync-all">مزامنة أسماء ورتب كل الأعضاء الآن</button>
         </div>
       </div></div>
 
@@ -234,6 +236,12 @@ async function tabSettings(box) {
       const res = await post('/api/admin/bot/commands');
       toast(res.ok ? 'تم تسجيل الأوامر في ديسكورد' : 'تعذّر تسجيل الأوامر، راجع حالة البوت', res.ok ? 'success' : 'danger');
       loadBot();
+    } catch (e) { toast(e.message, 'danger'); }
+  });
+  box.querySelector('#bot-sync-all').addEventListener('click', async () => {
+    try {
+      await post('/api/admin/sync-members');
+      toast('بدأت مزامنة كل الأعضاء (الأسماء من سيرفرنا + الرتب). ستظهر النتائج خلال لحظات.', 'success');
     } catch (e) { toast(e.message, 'danger'); }
   });
   box.querySelector('#bot-sync-check').addEventListener('click', async () => {
@@ -429,7 +437,7 @@ async function tabMembers(box) {
         <div class="card"><div class="card-body" style="overflow-x:auto">
           ${items.length ? `<table class="table"><thead><tr><th>العضو</th><th>الرتبة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
             ${items.map((m) => `<tr>
-              <td><div data-member-id="${esc(idOf(m))}"><strong>${esc(m.displayName || m.username || 'عضو')}</strong><br><small class="muted">${esc(m.username || '')}</small></div></td>
+              <td><div data-member-id="${esc(idOf(m))}"><strong>${esc(m.displayName || m.username || 'عضو')}</strong></div></td>
               <td>${canRank
                 ? `<select class="adm-input" data-rank="${esc(idOf(m))}" style="min-width:140px">${(data.ranks || []).map((r) => `<option value="${esc(r.key)}" ${r.key === m.rank ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`
                 : `<span style="color:${esc(m.rankColor)}">${esc(m.rankName)}</span>`}</td>
@@ -685,8 +693,7 @@ async function tabDiscipline(box) {
     <div class="card" style="margin-bottom:16px"><div class="card-body">
       <h3>إصدار إجراء جديد</h3>
       <form class="adm-form" id="dc-form">
-        <input class="adm-input" id="dc-search" type="text" placeholder="ابحث عن العضو…" />
-        <select class="adm-input" id="dc-user" size="5"></select>
+        <div class="adm-field"><strong>العضو</strong><div id="dc-picker"></div></div>
         <div class="adm-row">
           <label style="flex:1">النوع<select name="type">${Object.entries(DISC_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
           <label style="flex:1">قيمة الغرامة<input type="number" name="amount" min="0" value="0" /></label>
@@ -708,26 +715,23 @@ async function tabDiscipline(box) {
       </tbody></table>` : emptyState('لا سجلات', '')}
     </div></div>`;
 
-  const select = box.querySelector('#dc-user');
-  async function searchMembers(term) {
-    try {
-      const params = new URLSearchParams({ limit: '8' });
-      if (term) params.set('search', term);
-      const res = await get('/api/members?' + params.toString());
-      select.innerHTML = (res.items || []).map((m) => `<option value="${esc(idOf(m))}">${esc(m.displayName || m.username || 'عضو')}</option>`).join('');
-      if (select.options.length) select.selectedIndex = 0;
-    } catch (e) { select.innerHTML = ''; }
-  }
-  box.querySelector('#dc-search').addEventListener('input', debounce((event) => searchMembers(event.target.value.trim()), 300));
-  searchMembers('');
+  let memberList = [];
+  try { memberList = (await get('/api/members?limit=100')).items || []; } catch (e) { memberList = []; }
+  const picker = mountPicker(box.querySelector('#dc-picker'), {
+    options: memberList.map((m) => ({ id: idOf(m), label: m.displayName || m.username || 'عضو' })),
+    max: 1,
+    placeholder: 'ابحث عن العضو واضغط عليه…',
+    emptyText: 'لا يوجد عضو بهذا الاسم'
+  });
 
   const reload = () => tabDiscipline(box).catch((e) => { box.innerHTML = errBox(e); });
   box.querySelector('#dc-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.target;
-    if (!select.value) return toast('اختر العضو أولًا', 'warning');
+    const chosen = picker.getSelected()[0];
+    if (!chosen) return toast('اختر العضو أولًا', 'warning');
     try {
-      await post('/api/discipline', { userId: select.value, type: form.type.value, amount: Number(form.amount.value) || 0, reason: form.reason.value.trim() });
+      await post('/api/discipline', { userId: chosen.id, type: form.type.value, amount: Number(form.amount.value) || 0, reason: form.reason.value.trim() });
       sound.success(); toast('تم إصدار الإجراء', 'success'); reload();
     } catch (e) { sound.error(); toast(e.message, 'danger'); }
   });

@@ -152,4 +152,36 @@ async function syncOnlineUsers() {
   return count;
 }
 
-module.exports = { syncUser, syncOnlineUsers, resolveRank };
+let syncingAll = false;
+
+/* يحدّث أسماء (اسم الشخص داخل سيرفرنا) ورتب كل الأعضاء، وليس المتصلين فقط */
+async function syncAllUsers({ delayMs = 150 } = {}) {
+  if (syncingAll) return { running: true };
+  if (!mongooseReady() || !discordService.hasBot() || !config.discord.guildId) return { skipped: true };
+  syncingAll = true;
+  const result = { total: 0, renamed: 0, rankChanged: 0, failed: 0 };
+  try {
+    const User = require('../models/User');
+    const users = await User.find({ discordId: { $not: /^dev-/ } }).lean();
+    result.total = users.length;
+    for (const user of users) {
+      try {
+        const out = await syncUser(user, { emit: true });
+        if (out && out.skipped) {
+          result.failed += 1;
+        } else if (out && out.user) {
+          if (out.user.displayName !== user.displayName) result.renamed += 1;
+          if (out.rankChanged) result.rankChanged += 1;
+        }
+      } catch (error) {
+        result.failed += 1;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  } finally {
+    syncingAll = false;
+  }
+  return result;
+}
+
+module.exports = { syncUser, syncOnlineUsers, syncAllUsers, resolveRank };

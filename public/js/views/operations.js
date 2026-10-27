@@ -1,6 +1,7 @@
 import { get, post } from '../core/api.js';
 import { state, can } from '../core/state.js';
 import { esc, num, moneyText, timeAgo, pageHeader, kpi, emptyState, openModal, toast, progress, animateProgress } from '../core/ui.js';
+import { mountPicker } from '../core/picker.js';
 import * as sound from '../core/sound.js';
 
 export const meta = { title: 'غرفة العمليات', kicker: 'OPERATIONS' };
@@ -27,24 +28,13 @@ function goalCard(goal) {
     </div>`;
 }
 
-function itemRows(items, kind) {
-  return `
-    <div class="op-items-block" data-kind="${kind}">
-      <div class="row-between" style="margin:10px 0 6px">
-        <strong>${kind === 'looted' ? 'الغنائم (أيتمات حصلنا عليها)' : 'المفقودات (أيتمات خسرناها)'}</strong>
-        <button class="btn btn-ghost btn-sm" type="button" data-add="${kind}">+ إضافة أيتم</button>
-      </div>
-      <div class="op-rows" data-rows="${kind}"></div>
-      <div class="adm-note" data-sum="${kind}">الإجمالي: 0</div>
-    </div>`;
-}
-
 async function openNewOp(root) {
   let catalog = [];
   let members = [];
   try { catalog = (await get('/api/items')).items || []; } catch (e) { catalog = []; }
   try { members = (await get('/api/members?limit=100')).items || []; } catch (e) { members = []; }
   const label = state.config?.system?.currencyLabel || 'دولار';
+  const priceOf = (id) => (catalog.find((c) => c._id === id) || {}).price || 0;
 
   const modal = openModal({
     title: 'تسجيل عملية جديدة',
@@ -58,8 +48,11 @@ async function openNewOp(root) {
           <label>النوع<select name="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
           <label>المبلغ النقدي (${esc(label)})<input type="number" name="money" min="0" value="0" /></label>
         </div>
-        ${catalog.length ? itemRows(catalog, 'looted') + itemRows(catalog, 'lost') : '<p class="adm-note">لا توجد أيتمات بعد. اطلب من البزنس مانجر إضافة الأيتمات وأسعارها من «غرفة الأيتمات» لتحسب الغنائم والمفقودات تلقائيًا.</p>'}
-        ${members.length ? `<label>المشاركون (اختر عدة أعضاء بالضغط مع Ctrl)<select name="participants" multiple size="6">${members.map((m) => `<option value="${esc(m._id)}">${esc(m.displayName || m.username || 'عضو')}</option>`).join('')}</select></label>` : ''}
+        ${catalog.length ? `
+          <div class="adm-field"><strong>الغنائم (أيتمات حصلنا عليها)</strong><div id="pk-looted"></div><div class="adm-note" id="sum-looted">الإجمالي: 0</div></div>
+          <div class="adm-field"><strong>المفقودات (أيتمات خسرناها)</strong><div id="pk-lost"></div><div class="adm-note" id="sum-lost">الإجمالي: 0</div></div>`
+          : '<p class="adm-note">لا توجد أيتمات بعد. اطلب من البزنس مانجر إضافة الأيتمات وأسعارها من «غرفة الأيتمات» لتحسب الغنائم والمفقودات تلقائيًا.</p>'}
+        ${members.length ? '<div class="adm-field"><strong>المشاركون</strong><div id="pk-members"></div></div>' : ''}
         <label>ملاحظات<textarea name="notes" maxlength="1200"></textarea></label>
         <div class="goal-preview" id="op-preview"></div>
         <div class="adm-actions"><button class="btn btn-primary" type="submit">تسجيل العملية</button></div>
@@ -67,58 +60,51 @@ async function openNewOp(root) {
   });
   if (!modal) return;
   const form = modal.el.querySelector('#op-form');
-  const priceOf = (id) => (catalog.find((c) => c._id === id) || {}).price || 0;
+  let looted = null;
+  let lost = null;
+  let people = null;
 
-  function readRows(kind) {
-    return Array.from(form.querySelectorAll(`[data-rows="${kind}"] .op-row`)).map((row) => ({
-      itemId: row.querySelector('select').value,
-      qty: Math.max(1, Math.round(Number(row.querySelector('input').value) || 1))
-    })).filter((r) => r.itemId);
-  }
   function recalc() {
-    const total = (kind) => readRows(kind).reduce((sum, r) => sum + priceOf(r.itemId) * r.qty, 0);
-    const looted = total('looted');
-    const lost = total('lost');
+    const lootValue = looted ? looted.total(priceOf) : 0;
+    const lostValue = lost ? lost.total(priceOf) : 0;
     const money = Math.max(0, Number(form.money.value) || 0);
-    ['looted', 'lost'].forEach((kind) => {
-      const el = form.querySelector(`[data-sum="${kind}"]`);
-      if (el) el.textContent = 'الإجمالي: ' + moneyText(kind === 'looted' ? looted : lost);
-    });
+    const l1 = form.querySelector('#sum-looted');
+    const l2 = form.querySelector('#sum-lost');
+    if (l1) l1.textContent = 'الإجمالي: ' + moneyText(lootValue);
+    if (l2) l2.textContent = 'الإجمالي: ' + moneyText(lostValue);
     const win = form.result.value === 'win';
-    const delta = win ? Math.max(0, money + looted - lost) : -(lost + money);
+    const delta = win ? Math.max(0, money + lootValue - lostValue) : -(lostValue + money);
     form.querySelector('#op-preview').innerHTML = `<div class="kv"><span>أثر العملية على الهدف الأسبوعي</span><strong style="color:${delta >= 0 ? '#7ff0b0' : '#ff8a94'}">${delta >= 0 ? '+' : '−'}${num(Math.abs(delta))} ${esc(label)}</strong></div>`;
   }
-  function addRow(kind) {
-    const rows = form.querySelector(`[data-rows="${kind}"]`);
-    const row = document.createElement('div');
-    row.className = 'adm-row op-row';
-    row.innerHTML = `
-      <select class="adm-input" style="flex:2">${catalog.map((c) => `<option value="${esc(c._id)}">${esc(c.name)} — ${num(c.price)}</option>`).join('')}</select>
-      <input class="adm-input" type="number" min="1" value="1" style="flex:1;min-width:80px" />
-      <button class="btn btn-ghost btn-sm" type="button">✕</button>`;
-    row.querySelector('button').addEventListener('click', () => { row.remove(); recalc(); });
-    row.querySelector('select').addEventListener('change', recalc);
-    row.querySelector('input').addEventListener('input', recalc);
-    rows.appendChild(row);
-    recalc();
+
+  const itemOptions = catalog.map((c) => ({ id: c._id, label: c.name, sub: `${num(c.price)} ${label}` }));
+  if (catalog.length) {
+    looted = mountPicker(form.querySelector('#pk-looted'), { options: itemOptions, withQty: true, placeholder: 'ابحث عن أيتم واضغط عليه لإضافته…', onChange: recalc });
+    lost = mountPicker(form.querySelector('#pk-lost'), { options: itemOptions, withQty: true, placeholder: 'ابحث عن أيتم واضغط عليه لإضافته…', onChange: recalc });
   }
-  form.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => addRow(b.dataset.add)));
+  if (members.length) {
+    people = mountPicker(form.querySelector('#pk-members'), {
+      options: members.map((m) => ({ id: m._id, label: m.displayName || m.username || 'عضو' })),
+      placeholder: 'ابحث عن عضو واضغط عليه لإضافته…',
+      emptyText: 'لا يوجد عضو بهذا الاسم'
+    });
+  }
   form.money.addEventListener('input', recalc);
   form.result.addEventListener('change', recalc);
   recalc();
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const names = (rows) => rows.map((r) => ({ itemId: r.itemId, name: (catalog.find((c) => c._id === r.itemId) || {}).name, qty: r.qty }));
+    const toItems = (picker) => (picker ? picker.getSelected() : []).map((r) => ({ itemId: r.id, name: (catalog.find((c) => c._id === r.id) || {}).name, qty: r.qty }));
     const body = {
       title: form.title.value.trim(),
       result: form.result.value,
       type: form.type.value,
       money: Math.max(0, Number(form.money.value) || 0),
       notes: form.notes.value.trim(),
-      looted: names(readRows('looted')),
-      lost: names(readRows('lost')),
-      participants: form.participants ? Array.from(form.participants.selectedOptions).map((o) => o.value) : []
+      looted: toItems(looted),
+      lost: toItems(lost),
+      participants: people ? people.getSelected().map((r) => r.id) : []
     };
     try {
       await post('/api/operations', body);

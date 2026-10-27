@@ -34,7 +34,7 @@ export async function render(root) {
               <tbody>
                 ${items.map((m) => `
                   <tr>
-                    <td><div data-member-id="${esc(String(m._id))}">${userCell({ displayName: m.displayName, avatar: m.avatar, avatarUrl: m.avatarUrl, discordId: m.discordId }, m.username)}</div></td>
+                    <td><div data-member-id="${esc(String(m._id))}">${userCell({ displayName: m.displayName, avatar: m.avatar, avatarUrl: m.avatarUrl, discordId: m.discordId }, '')}</div></td>
                     <td><span class="rank-pill" style="color:${esc(m.rankColor)}">${esc(m.rankIcon || '')} ${esc(m.rankName)}</span></td>
                     <td>${m.blocked ? badge('محظور', 'danger') : (m.duty && m.duty.status === 'on' ? statusBadge('on') : statusBadge('off'))}</td>
                     <td class="muted">${m.lastSeen ? new Date(m.lastSeen).toLocaleDateString('ar-SA') : '—'}</td>

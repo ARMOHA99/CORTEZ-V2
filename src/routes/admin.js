@@ -204,6 +204,17 @@ router.get(
 );
 
 router.post(
+  '/sync-members',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const syncService = require('../services/sync');
+    syncService.syncAllUsers().catch((error) => console.error('[Admin] sync-all:', error.message));
+    res.json({ ok: true, started: true });
+  })
+);
+
+router.post(
   '/bot/commands',
   requireAuth,
   requirePermission('settings:manage'),
