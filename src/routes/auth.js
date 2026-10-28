@@ -69,7 +69,15 @@ router.get(
       oauthUser = await discordService.fetchOAuthUser(tokenData.access_token);
     } catch (exchangeError) {
       console.error('[Auth] OAuth:', exchangeError.message);
-      return res.redirect('/?error=oauth_failed');
+      let why = 'unknown';
+      const text = `${exchangeError.discordError || ''} ${exchangeError.description || ''}`.toLowerCase();
+      if (exchangeError.status === 429) why = 'rate_limited';
+      else if (exchangeError.status >= 500) why = 'discord_down';
+      else if (text.includes('invalid_client') || exchangeError.status === 401) why = 'invalid_client';
+      else if (text.includes('redirect_uri')) why = 'redirect_mismatch';
+      else if (text.includes('invalid_grant')) why = 'invalid_grant';
+      else if (exchangeError.network || exchangeError.name === 'TimeoutError' || exchangeError.name === 'AbortError') why = 'network';
+      return res.redirect('/?error=oauth_failed&why=' + why);
     }
 
     let member = null;

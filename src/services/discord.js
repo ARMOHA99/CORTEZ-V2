@@ -64,17 +64,38 @@ async function exchangeCode(code) {
     code,
     redirect_uri: config.discord.redirectUri
   });
-  const response = await fetch(`${API}/oauth2/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-    signal: AbortSignal.timeout(15000)
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(`فشل تبادل كود OAuth2: ${data.error_description || response.status}`);
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(`${API}/oauth2/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+        signal: AbortSignal.timeout(15000)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) return data;
+      const error = new Error(`فشل تبادل كود OAuth2: ${data.error_description || data.error || response.status}`);
+      error.status = response.status;
+      error.discordError = data.error || '';
+      error.description = data.error_description || '';
+      const transient = response.status === 429 || response.status >= 500;
+      if (!transient || attempt === 3) throw error;
+      lastError = error;
+      const wait = Math.min(5000, Math.round((Number(data.retry_after) || Number(response.headers.get('retry-after')) || attempt) * 1000));
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    } catch (error) {
+      if (error.status && !(error.status === 429 || error.status >= 500)) throw error;
+      if (error.status && attempt === 3) throw error;
+      if (!error.status) {
+        error.network = true;
+        lastError = error;
+        if (attempt === 3) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+      }
+    }
   }
-  return data;
+  throw lastError || new Error('فشل تبادل كود OAuth2');
 }
 
 async function refreshToken(refreshToken) {
