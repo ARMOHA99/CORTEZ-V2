@@ -246,7 +246,12 @@ async function boot() {
       banned: 'أنت محظور في سيرفر ديسكورد.',
       blocked: 'تم حظر حسابك من الموقع.',
       oauth_failed: ({
-        rate_limited: 'ديسكورد يحدّ مؤقتاً من الطلبات القادمة من خادم الموقع. انتظر 5 إلى 10 دقائق ثم أعد المحاولة.',
+        rate_limited: (() => {
+          const wait = Number(params.get('wait')) || 0;
+          const when = wait >= 120 ? `نحو ${Math.ceil(wait / 60)} دقيقة` : wait > 0 ? `${wait} ثانية` : '5 إلى 10 دقائق';
+          return `ديسكورد يحدّ مؤقتاً من الطلبات القادمة من خادم الموقع. انتظر ${when} ثم أعد المحاولة.`;
+        })(),
+        ip_blocked: 'ديسكورد (عبر Cloudflare) يحظر عنوان خادم Render نفسه مؤقتاً. هذا ليس خطأ في موقعك، وتحله إعادة تشغيل الخدمة ليأخذ عنوانًا جديدًا أو استخدام بروكسي لديسكورد (راجع الشرح).',
         discord_down: 'خوادم ديسكورد لا تستجيب الآن. أعد المحاولة بعد قليل.',
         invalid_client: 'رقم تطبيق ديسكورد أو سرّه (DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET) غير صحيح في إعدادات Render.',
         redirect_mismatch: 'رابط العودة غير مطابق: يجب إضافة نفس الرابط DISCORD_REDIRECT_URI حرفياً في Developer Portal ثم OAuth2 ثم Redirects.',

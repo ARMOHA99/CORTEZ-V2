@@ -15,6 +15,33 @@ function dbReady() {
 }
 
 router.get(
+  '/discord-health',
+  asyncHandler(async (req, res) => {
+    const discordService = require('../services/discord');
+    const probe = await discordService.probeDiscord();
+    const diag = discordService.getOAuthDiagnostics();
+    res.json({
+      time: new Date().toISOString(),
+      apiProxyInUse: Boolean(process.env.DISCORD_API_BASE),
+      clientConfigured: Boolean(config.discord.clientId && config.discord.clientSecret),
+      botTokenSet: Boolean(config.bot.token),
+      probeDiscordFromThisServer: probe,
+      lastLoginFailure: diag.lastFailure,
+      lastLoginSuccessAt: diag.lastSuccessAt,
+      verdict: !probe.reachable
+        ? 'الخادم لا يستطيع الوصول إلى ديسكورد إطلاقاً'
+        : probe.cloudflareBlock
+          ? 'ديسكورد/Cloudflare يحظر عنوان هذا الخادم (حظر على مستوى IP)'
+          : probe.status === 429
+            ? 'ديسكورد يحدّ من طلبات هذا الخادم مؤقتاً'
+            : probe.ok
+              ? 'الاتصال بديسكورد سليم من هذا الخادم'
+              : 'ديسكورد يرد بحالة غير متوقعة: ' + probe.status
+    });
+  })
+);
+
+router.get(
   '/config',
   asyncHandler(async (req, res) => {
     const payload = publicConfig(req);

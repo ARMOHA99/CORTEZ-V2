@@ -133,7 +133,8 @@ function startBot() {
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages
       ],
-      partials: [Partials.GuildMember, Partials.User]
+      partials: [Partials.GuildMember, Partials.User],
+      ...(process.env.DISCORD_API_BASE ? { rest: { api: String(process.env.DISCORD_API_BASE).replace(/\/v\d+\/?$/, '').replace(/\/+$/, '') } } : {})
     });
 
     discordService.setClient(client);

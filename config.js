@@ -62,7 +62,7 @@ const config = {
       `${process.env.BASE_URL || 'http://localhost:3000'}/auth/discord/callback`,
     inviteUrl: process.env.DISCORD_INVITE_URL || 'https://discord.gg/cortez',
     scopes: ['identify', 'guilds'],
-    api: 'https://discord.com/api/v10',
+    api: (process.env.DISCORD_API_BASE || 'https://discord.com/api/v10').replace(/\/+$/, ''),
     ownerIds: (process.env.DISCORD_OWNER_IDS || '')
       .split(',')
       .map((id) => id.trim())

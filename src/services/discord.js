@@ -53,6 +53,42 @@ async function rest(path, options = {}) {
   return response.json();
 }
 
+const oauthDiag = { lastFailure: null, lastSuccessAt: null };
+let probeCache = { at: 0, value: null };
+
+function recordOAuthFailure(info) {
+  oauthDiag.lastFailure = { ...info, at: new Date().toISOString() };
+}
+
+function getOAuthDiagnostics() {
+  return { ...oauthDiag };
+}
+
+/* فحص خفيف: هل يردّ ديسكورد على هذا الخادم أم يحظر عنوانه؟ (يُخزَّن 60 ثانية) */
+async function probeDiscord() {
+  if (probeCache.value && Date.now() - probeCache.at < 60000) return probeCache.value;
+  const started = Date.now();
+  let value;
+  try {
+    const response = await fetch(`${API}/gateway`, { signal: AbortSignal.timeout(8000) });
+    const raw = await response.text();
+    const contentType = response.headers.get('content-type') || '';
+    const cloudflare = !response.ok && !contentType.includes('json') && /cloudflare|error code|<html/i.test(raw);
+    value = {
+      reachable: true,
+      status: response.status,
+      ok: response.ok,
+      cloudflareBlock: cloudflare,
+      retryAfterSeconds: Number(response.headers.get('retry-after')) || 0,
+      ms: Date.now() - started
+    };
+  } catch (error) {
+    value = { reachable: false, error: String(error.message || error).slice(0, 120), ms: Date.now() - started };
+  }
+  probeCache = { at: Date.now(), value };
+  return value;
+}
+
 async function exchangeCode(code) {
   if (!config.discord.clientId || !config.discord.clientSecret) {
     throw new Error('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET غير مهيأة');
@@ -66,34 +102,44 @@ async function exchangeCode(code) {
   });
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let response;
+    let raw = '';
     try {
-      const response = await fetch(`${API}/oauth2/token`, {
+      response = await fetch(`${API}/oauth2/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
         signal: AbortSignal.timeout(15000)
       });
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) return data;
-      const error = new Error(`فشل تبادل كود OAuth2: ${data.error_description || data.error || response.status}`);
-      error.status = response.status;
-      error.discordError = data.error || '';
-      error.description = data.error_description || '';
-      const transient = response.status === 429 || response.status >= 500;
-      if (!transient || attempt === 3) throw error;
-      lastError = error;
-      const wait = Math.min(5000, Math.round((Number(data.retry_after) || Number(response.headers.get('retry-after')) || attempt) * 1000));
-      await new Promise((resolve) => setTimeout(resolve, wait));
+      raw = await response.text();
     } catch (error) {
-      if (error.status && !(error.status === 429 || error.status >= 500)) throw error;
-      if (error.status && attempt === 3) throw error;
-      if (!error.status) {
-        error.network = true;
-        lastError = error;
-        if (attempt === 3) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
-      }
+      error.network = true;
+      lastError = error;
+      recordOAuthFailure({ network: true, message: error.message });
+      if (attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+      continue;
     }
+    let data = {};
+    try { data = JSON.parse(raw); } catch (error) { data = {}; }
+    if (response.ok) {
+      oauthDiag.lastSuccessAt = new Date().toISOString();
+      return data;
+    }
+    const contentType = response.headers.get('content-type') || '';
+    const cloudflare = !contentType.includes('json') && /cloudflare|error code|<html/i.test(raw);
+    const retryAfter = Number(data.retry_after) || Number(response.headers.get('retry-after')) || 0;
+    const error = new Error(`فشل تبادل كود OAuth2: ${data.error_description || data.error || response.status}`);
+    error.status = response.status;
+    error.discordError = data.error || '';
+    error.description = data.error_description || '';
+    error.cloudflare = cloudflare;
+    error.retryAfter = retryAfter;
+    recordOAuthFailure({ status: response.status, cloudflare, retryAfter, discordError: error.discordError });
+    lastError = error;
+    const transient = response.status >= 500 || (response.status === 429 && !cloudflare && retryAfter <= 5);
+    if (!transient || attempt === 3) throw error;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(5000, Math.max(300, retryAfter * 1000 || attempt * 1000))));
   }
   throw lastError || new Error('فشل تبادل كود OAuth2');
 }
@@ -512,6 +558,8 @@ module.exports = {
   addWarningRole,
   removeWarningRole,
   normalizeMember,
+  getOAuthDiagnostics,
+  probeDiscord,
   sendChannel,
   resolveChannelId,
   listGuildRoles,
