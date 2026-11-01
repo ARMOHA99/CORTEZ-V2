@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /$
+Disallow: /api/
+Disallow: /auth/
+Disallow: /uploads/
+Disallow: /#/
+
+Sitemap: https://cortez-v2.onrender.com/sitemap.xml
