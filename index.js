@@ -1,0 +1,265 @@
+const config = require('../../config');
+const discordService = require('../services/discord');
+const memberCard = require('../services/memberCard');
+const dutyBot = require('./duty');
+
+let client = null;
+const cooldowns = new Map();
+
+async function buildCardFor(userId) {
+  const User = require('../models/User');
+  const user = await User.findOne({ discordId: String(userId) });
+  if (!user) return null;
+  const card = await memberCard.build(user._id);
+  if (!card) return null;
+  const { generateCard } = require('./card');
+  return {
+    card,
+    buffer: await generateCard(card)
+  };
+}
+
+async function handleCard(interaction) {
+  const targetUser = interaction.options.getUser('user') || interaction.user;
+  const key = `${interaction.user.id}:${targetUser.id}`;
+  const now = Date.now();
+  const until = cooldowns.get(key) || 0;
+  if (now < until) {
+    return interaction.reply({
+      content: `انتظر ${Math.ceil((until - now) / 1000)} ثانية قبل طلب بطاقة أخرى.`,
+      ephemeral: true
+    });
+  }
+  cooldowns.set(key, now + config.bot.cardCooldownSeconds * 1000);
+
+  await interaction.deferReply();
+  try {
+    const result = await buildCardFor(targetUser.id);
+    if (!result) {
+      return interaction.editReply({
+        content: 'هذا العضو غير مسجل في منصة كورتاس بعد.'
+      });
+    }
+    const { AttachmentBuilder } = require('discord.js');
+    const attachment = new AttachmentBuilder(result.buffer, { name: `cortez-card-${targetUser.id}.png` });
+    return interaction.editReply({
+      content: `🩸 بطاقة العضو <@${targetUser.id}>`,
+      files: [attachment]
+    });
+  } catch (error) {
+    console.error('[Bot] card:', error);
+    return interaction.editReply({ content: 'تعذّر توليد البطاقة حالياً. حاول لاحقاً.' });
+  }
+}
+
+async function registerCommands() {
+  if (!client || !client.isReady()) {
+    discordService.setBotError('البوت غير متصل حالياً، فلا يمكن تسجيل الأوامر.');
+    return false;
+  }
+  const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+  const commands = [
+    new SlashCommandBuilder()
+      .setName(config.bot.cardCommand)
+      .setDescription('عرض بطاقة العضو الإلكترونية الخاصة بكورتاس')
+      .addUserOption((option) =>
+        option.setName('user').setDescription('عضو آخر لعرض بطاقته').setRequired(false)
+      ),
+    new SlashCommandBuilder()
+      .setName('cortez')
+      .setDescription('روابط ومعلومات منصة كورتاس'),
+    new SlashCommandBuilder()
+      .setName('duty')
+      .setDescription('نشر لوحة الدوام في هذه القناة')
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  ].map((command) => command.toJSON());
+
+  try {
+    const guildId = config.discord.guildId;
+    if (guildId) {
+      const guild = await client.guilds.fetch(guildId).catch(() => null);
+      if (guild) {
+        await guild.commands.set(commands);
+        // إزالة أي أوامر عالمية قديمة (سبب تكرار /card و/cortez في القائمة)
+        await client.application.commands.set([]).catch(() => null);
+        console.log(`[Bot] تم تسجيل أوامر الرتبة في ${guild.name}`);
+        return true;
+      }
+      discordService.setBotError('البوت ليس عضواً في السيرفر المحدد (تحقق من DISCORD_GUILD_ID وأضف البوت للسيرفر).');
+    }
+    await client.application.commands.set(commands);
+    console.log('[Bot] تم تسجيل الأوامر عالمياً');
+    return true;
+  } catch (error) {
+    console.error('[Bot] register commands:', error.message);
+    discordService.setBotError('فشل تسجيل الأوامر: ' + error.message + ' — أعد دعوة البوت مع صلاحية applications.commands.');
+    return false;
+  }
+}
+
+async function handleCortez(interaction) {
+  const payload = {
+    embeds: [
+      discordService.embed(
+        `${config.org.name} • ${config.org.nameLatin}`,
+        config.org.description,
+        config.bot.embedColor,
+        [
+          { name: 'الشعار', value: config.org.motto, inline: false },
+          { name: 'المنصة', value: process.env.BASE_URL || 'http://localhost:3000', inline: false },
+          { name: 'التوقيع', value: 'وقّع عقد الدم لتثبت انتماءك.', inline: false }
+        ]
+      )
+    ],
+    ephemeral: true
+  };
+  return interaction.reply(payload);
+}
+
+function startBot() {
+  if (!config.bot.enabled) {
+    console.log('[Bot] معطّل من الإعدادات.');
+    return null;
+  }
+  if (!config.bot.token) {
+    console.log('[Bot] لا يوجد توكن. شغّل البوت بإضافة DISCORD_BOT_TOKEN.');
+    return null;
+  }
+  try {
+    const {
+      Client,
+      GatewayIntentBits,
+      Partials,
+      Events,
+      ActivityType
+    } = require('discord.js');
+
+    client = new Client({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages
+      ],
+      partials: [Partials.GuildMember, Partials.User],
+      ...(process.env.DISCORD_API_BASE ? { rest: { api: String(process.env.DISCORD_API_BASE).replace(/\/v\d+\/?$/, '').replace(/\/+$/, '') } } : {})
+    });
+
+    discordService.setClient(client);
+
+    client.once(Events.ClientReady, async (readyClient) => {
+      console.log(`[Bot] متصل كـ ${readyClient.user.tag}`);
+      discordService.setBotError('');
+      try {
+        readyClient.user.setActivity(config.bot.activity, { type: ActivityType.Watching });
+      } catch (error) {
+        /* ignore */
+      }
+      await registerCommands();
+    });
+
+    client.on(Events.InteractionCreate, async (interaction) => {
+      // أزرار لوحة الدوام (بدء / استراحة / متابعة / إنهاء)
+      if (interaction.isButton() && interaction.customId.startsWith('duty:')) {
+        try {
+          await dutyBot.handleButton(interaction);
+        } catch (error) {
+          console.error('[Bot] duty button:', error);
+        }
+        return;
+      }
+
+      if (!interaction.isChatInputCommand()) return;
+      try {
+        if (interaction.commandName === config.bot.cardCommand) {
+          await handleCard(interaction);
+        } else if (interaction.commandName === 'cortez') {
+          await handleCortez(interaction);
+        } else if (interaction.commandName === 'duty') {
+          if (!interaction.channel || typeof interaction.channel.send !== 'function') {
+            await interaction.reply({ content: 'استخدم الأمر داخل قناة نصية.', ephemeral: true });
+            return;
+          }
+          await dutyBot.postPanel(interaction.channel);
+          await interaction.reply({ content: '✅ تم نشر لوحة الدوام.', ephemeral: true });
+        }
+      } catch (error) {
+        console.error('[Bot] interaction:', error);
+        if (!interaction.replied && !interaction.deferred) {
+          interaction.reply({ content: 'حدث خطأ غير متوقع.', ephemeral: true }).catch(() => null);
+        }
+      }
+    });
+
+    client.on(Events.GuildMemberAdd, async (member) => {
+      try {
+        if (config.discord.guildId && member.guild.id !== config.discord.guildId) return;
+        if (config.discord.roles.member) {
+          await member.roles.add(config.discord.roles.member, 'CORTEZ Welcome').catch(() => null);
+        }
+        await discordService.sendChannel('announcements', {
+          content: `🩸 <@${member.id}> انضم إلى عائلة ${config.org.name}. وقّع عقد الدم لتثبت ولاءك.`,
+          allowedMentions: { users: [member.id] }
+        });
+      } catch (error) {
+        console.error('[Bot] member add:', error.message);
+      }
+    });
+
+    const syncMember = async (discordId) => {
+      try {
+        const User = require('../models/User');
+        const user = await User.findOne({ discordId: String(discordId) }).lean();
+        if (!user) return;
+        await require('../services/sync').syncUser(user, { emit: true });
+      } catch (error) {
+        console.error('[Bot] role sync:', error.message);
+      }
+    };
+
+    client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
+      if (config.discord.guildId && newMember.guild.id !== config.discord.guildId) return;
+      syncMember(newMember.id);
+    });
+
+    client.on(Events.GuildMemberRemove, (member) => {
+      if (config.discord.guildId && member.guild.id !== config.discord.guildId) return;
+      syncMember(member.id);
+    });
+
+    client.on(Events.GuildCreate, () => {
+      registerCommands();
+    });
+
+    client.on(Events.Error, (error) => {
+      console.error('[Bot] client error:', error.message);
+    });
+
+    client.login(config.bot.token).catch((error) => {
+      console.error('[Bot] login failed:', error.message);
+      const message = String(error.message || '');
+      let hint = '';
+      if (/disallowed intents/i.test(message)) hint = ' — فعّل Server Members Intent من Developer Portal ثم Bot.';
+      else if (/invalid token|token/i.test(message)) hint = ' — توكن البوت خاطئ، انسخه من جديد (Reset Token).';
+      discordService.setBotError('فشل تسجيل دخول البوت: ' + message + hint);
+    });
+
+    return client;
+  } catch (error) {
+    console.error('[Bot] start failed:', error.message);
+    return null;
+  }
+}
+
+function stopBot() {
+  if (client) {
+    try {
+      client.destroy();
+    } catch (error) {
+      /* ignore */
+    }
+    client = null;
+  }
+  discordService.setClient(null);
+}
+
+module.exports = { startBot, stopBot, buildCardFor, registerCommands };
