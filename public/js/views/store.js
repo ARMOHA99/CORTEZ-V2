@@ -1,4 +1,4 @@
-import { get, post, patch } from '../core/api.js';
+import { get, post, patch, upload } from '../core/api.js';
 import { state } from '../core/state.js';
 import { esc, num, money, pageHeader, emptyState, openModal, toast } from '../core/ui.js';
 import * as sound from '../core/sound.js';
@@ -136,7 +136,15 @@ function openListingForm(root) {
           <label>الكمية<input type="number" name="qty" min="1" max="${Number(limits.maxQty) || 5}" value="1" required /></label>
           <label>الفئة<select name="category">${CATEGORIES.map((c) => `<option value="${c.key}">${c.label}</option>`).join('')}</select></label>
         </div>
-        <label>رابط الصورة (اختياري)<input type="text" name="image" maxlength="500" placeholder="https://… أو ارفعها من لوحة الإدارة" /></label>
+        <div class="mk-image">
+          <span class="mk-label">صورة المنتج (اختياري)</span>
+          <div class="mk-image-row">
+            <input type="text" name="image" id="mk-image" maxlength="500" placeholder="https://… أو ارفع صورة من جهازك" />
+            <button type="button" class="btn btn-ghost btn-sm" id="mk-pick">📁 من جهازي</button>
+            <input type="file" id="mk-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+          </div>
+          <div class="mk-preview hidden" id="mk-preview"><img alt="معاينة" /></div>
+        </div>
         <div class="market-terms">
           <span>العمولة ${num(limits.commissionPercent)}% تُخصم لصالح الخزينة عند البيع.</span>
           <span>مدة العرض ${num(limits.durationDays)} يومًا، والحد ${num(limits.maxQty)} قطعة.</span>
@@ -147,6 +155,40 @@ function openListingForm(root) {
     footer: '<button class="btn btn-ghost" data-close>إلغاء</button><button class="btn btn-primary" id="mk-save">إرسال العرض</button>',
     onMount: (m) => {
       m.el.querySelector('[data-close]').onclick = () => m.close();
+
+      /* رفع صورة من جهاز العضو */
+      const imageInput = m.el.querySelector('#mk-image');
+      const fileInput = m.el.querySelector('#mk-file');
+      const pickBtn = m.el.querySelector('#mk-pick');
+      const preview = m.el.querySelector('#mk-preview');
+      const showPreview = (url) => {
+        if (!preview) return;
+        if (!url) { preview.classList.add('hidden'); return; }
+        preview.querySelector('img').src = url;
+        preview.classList.remove('hidden');
+      };
+      imageInput?.addEventListener('input', () => showPreview(imageInput.value.trim()));
+      pickBtn?.addEventListener('click', () => fileInput?.click());
+      fileInput?.addEventListener('change', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (file.size > 6 * 1024 * 1024) return toast('حجم الصورة كبير (الحد 6 ميجا)', 'warning');
+        pickBtn.disabled = true;
+        pickBtn.textContent = 'جارٍ الرفع…';
+        try {
+          const res = await upload(file, '/api/market/upload');
+          imageInput.value = res.url || '';
+          showPreview(res.url);
+          sound.success();
+        } catch (error) {
+          sound.error();
+          toast(error.message, 'danger');
+        } finally {
+          pickBtn.disabled = false;
+          pickBtn.textContent = '📁 من جهازي';
+          fileInput.value = '';
+        }
+      });
       m.el.querySelector('#mk-save').onclick = async () => {
         const form = m.el.querySelector('#mk-form');
         const body = {

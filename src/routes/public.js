@@ -82,6 +82,9 @@ router.get(
 );
 
 router.get('/version', (req, res) => {
+  /* لا تخزين: الواجهة تقارن هذا الإصدار مع إصدارها لتعمل إعادة تحميل قسرية عند أي تحديث */
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
   res.json({ release: release.version, at: release.builtAt });
 });
 

@@ -1,10 +1,41 @@
 const express = require('express');
+const multer = require('multer');
+const config = require('../../config');
 const { asyncHandler, httpError } = require('../utils/http');
 const { requireAuth, requirePermission } = require('../middleware/auth');
 const market = require('../services/market');
 const audit = require('../services/audit');
 
 const router = express.Router();
+
+/* رفع صورة منتج من جهاز العضو (بدل الرابط فقط) */
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: Math.min(6, config.system.maxUploadMb) * 1024 * 1024, files: 1 },
+  fileFilter(req, file, callback) {
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)) {
+      return callback(httpError(400, 'يُسمح بالصور فقط (png, jpg, webp, gif)', 'INVALID_FILE'));
+    }
+    return callback(null, true);
+  }
+});
+
+/* حد بسيط لمنع الإساءة: 15 صورة في الساعة لكل عضو */
+const uploadWindow = new Map();
+function throttleUpload(userId) {
+  const key = String(userId);
+  const now = Date.now();
+  const entry = uploadWindow.get(key);
+  if (!entry || entry.resetAt < now) {
+    uploadWindow.set(key, { count: 1, resetAt: now + 3600000 });
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > 15) throw httpError(429, 'رفعت صورًا كثيرة، حاول بعد قليل', 'UPLOAD_RATE');
+  if (uploadWindow.size > 500) {
+    for (const [id, value] of uploadWindow) if (value.resetAt < now) uploadWindow.delete(id);
+  }
+}
 
 function dbReady() {
   const mongoose = require('mongoose');
@@ -67,6 +98,22 @@ router.patch(
   asyncHandler(async (req, res) => {
     const listing = await market.update({ id: req.params.id, user: req.user, body: req.body || {} });
     res.json({ listing: market.serialize(listing, req.user._id) });
+  })
+);
+
+/* رفع صورة منتج من جهاز العضو — متاح لمن يحق له العرض في السوق */
+router.post(
+  '/upload',
+  requireAuth,
+  imageUpload.single('image'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) throw httpError(400, 'لم يتم إرسال صورة', 'NO_FILE');
+    const allowed = await market.canSell(req.user);
+    if (!allowed.ok) throw httpError(403, allowed.reason, 'MARKET_RANK');
+    throttleUpload(req.user._id);
+    const uploader = require('../services/uploader');
+    const result = await uploader.saveImage(req.file.buffer, req.file.mimetype, req.file.originalname);
+    res.json({ url: result.url, provider: result.provider, note: result.note });
   })
 );
 

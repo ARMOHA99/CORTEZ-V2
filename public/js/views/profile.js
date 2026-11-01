@@ -26,6 +26,11 @@ export async function render(root) {
             <div class="mc-stat"><strong>${num(card.operations?.wins||0)}</strong><span>انتصارات</span></div>
             <div class="mc-stat"><strong>${card.operations?.winRate||0}%</strong><span>نسبة الفوز</span></div>
           </div>
+          ${(card.badges?.items || []).length ? `
+            <div class="mc-badges">
+              ${(card.badges.items || []).map((b) => `<span class="mc-badge" style="--bc:${esc(b.color)}" title="${esc(b.name)}"><span>${esc(b.icon)}</span>${esc(b.name)}</span>`).join('')}
+              ${Number(card.badges.total||0) > (card.badges.items||[]).length ? `<a class="mc-badge more" href="#/achievements">+${Number(card.badges.total) - card.badges.items.length}</a>` : ''}
+            </div>` : ''}
           <div class="mc-foot">
             <div>
               <p class="eyebrow">BLOOD PACT</p>

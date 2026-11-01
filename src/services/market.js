@@ -66,6 +66,17 @@ async function rankLevelOf(user) {
   }
 }
 
+/* هل يحق لهذا العضو العرض في السوق؟ */
+async function canSell(user) {
+  const bounds = await limits();
+  if (!bounds.enabled) return { ok: false, reason: 'سوق الأعضاء مغلق حالياً', bounds };
+  const level = await rankLevelOf(user);
+  if (level < bounds.minRankLevel) {
+    return { ok: false, reason: 'سوق الأعضاء متاح للأعضاء المعتمدين فقط', bounds };
+  }
+  return { ok: true, bounds };
+}
+
 /* ─────────── استهلاك حصة الأسبوع ─────────── */
 async function usage(sellerId, limitsOverride = null) {
   const bounds = limitsOverride || (await limits());
@@ -398,6 +409,7 @@ async function recordSale({ listingId, qty, order, buyer }) {
 }
 
 module.exports = {
+  canSell,
   limits,
   weekKey,
   usage,

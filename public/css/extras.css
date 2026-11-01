@@ -637,3 +637,23 @@ html.cmdk-lock { overflow: hidden; }
   .market-row { flex-wrap: wrap; }
   .market-row-side { width: 100%; justify-items: start; }
 }
+
+/* صورة منتج العضو: رابط أو رفع من الجهاز */
+.mk-image { display: grid; gap: 8px; }
+.mk-label { font-size: 13px; color: var(--muted); }
+.mk-image-row { display: flex; gap: 8px; align-items: center; }
+.mk-image-row input[type="text"] { flex: 1; }
+.mk-preview { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--line); max-width: 220px; }
+.mk-preview img { width: 100%; height: auto; display: block; }
+.mk-preview.hidden { display: none; }
+
+/* أوسمة صغيرة على بطاقة العضو */
+.mc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+.mc-badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; color: var(--text); text-decoration: none;
+  background: color-mix(in srgb, var(--bc, #e63946) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bc, #e63946) 45%, transparent);
+}
+.mc-badge span { font-size: 12px; line-height: 1; }
+.mc-badge.more { color: var(--muted); background: rgba(255,255,255,.04); border-color: var(--line); }

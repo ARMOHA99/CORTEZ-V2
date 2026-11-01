@@ -7,7 +7,16 @@ import * as sound from './sound.js';
 
 let socket = null;
 let connected = false;
-let releaseChecked = false;
+
+/* الإصدار الذي حُمّلت به هذه الصفحة — ثابت لا يتغير أبدًا داخل الجلسة.
+   المقارنة يجب أن تكون معه، لا مع state.release الذي يُحدَّث من الخادم. */
+const bootRelease = (() => {
+  const meta = document.querySelector('meta[name="release"]');
+  const value = String((meta && meta.content) || '').trim();
+  return value && value !== '__RELEASE__' ? value : '';
+})();
+
+let refreshing = false;
 
 export function getSocket() {
   return socket;
@@ -17,23 +26,92 @@ export function isConnected() {
   return connected;
 }
 
-function handleRelease(release) {
-  if (!release) return;
-  const current = state.release || document.querySelector('meta[name="release"]')?.content || '';
-  if (current && current !== '__RELEASE__' && current !== release) {
-    if (releaseChecked) return;
-    releaseChecked = true;
-    try {
-      if (sessionStorage.getItem('cortez.reloaded') === release) return;
-      sessionStorage.setItem('cortez.reloaded', release);
-    } catch (error) {
-      /* ignore */
-    }
-    toast('تم تحديث المنصة، جاري إعادة التحميل...', 'info', 'تحديث');
-    setTimeout(() => {
-      window.location.reload();
-    }, 900);
+export function getBootRelease() {
+  return bootRelease;
+}
+
+/* إعادة تحميل قسرية مع كسر الكاش، حتى لا تعود الصفحة القديمة من المتصفح */
+function forceRefresh(release) {
+  if (refreshing) return;
+  refreshing = true;
+  try {
+    sessionStorage.setItem('cortez.reloaded', release);
+  } catch (error) {
+    /* ignore */
   }
+  toast('صدر تحديث جديد للمنصة، جاري إعادة التحميل…', 'info', 'تحديث');
+  setTimeout(() => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_v', release);
+      window.location.replace(url.toString());
+    } catch (error) {
+      window.location.reload();
+    }
+  }, 800);
+}
+
+function handleRelease(release) {
+  const next = String(release || '').trim();
+  if (!next || !bootRelease || next === bootRelease) return;
+  try {
+    if (sessionStorage.getItem('cortez.reloaded') === next) return;
+  } catch (error) {
+    /* ignore */
+  }
+  /* لا نقطع الكتابة على العضو: ننتظر خروجه من الحقل (بحد أقصى دقيقة) */
+  const active = document.activeElement;
+  const typing = active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
+  if (typing) {
+    toast('تحديث جديد جاهز، سيُطبَّق بعد انتهاء كتابتك', 'warning', 'تحديث');
+    const timer = setTimeout(() => forceRefresh(next), 60000);
+    active.addEventListener(
+      'blur',
+      () => {
+        clearTimeout(timer);
+        setTimeout(() => forceRefresh(next), 700);
+      },
+      { once: true }
+    );
+    return;
+  }
+  forceRefresh(next);
+}
+
+/* مراقبة الإصدار: تعمل حتى لو تعذّر الاتصال بـ Socket.io */
+export function watchRelease() {
+  if (!bootRelease) return () => {};
+  let stopped = false;
+
+  const check = async () => {
+    if (stopped || refreshing) return;
+    try {
+      const response = await fetch('/api/public/version', { cache: 'no-store', credentials: 'same-origin' });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data && data.release) handleRelease(data.release);
+    } catch (error) {
+      /* الشبكة متعثرة: نعيد المحاولة في الدورة التالية */
+    }
+  };
+
+  const first = setTimeout(check, 6000);
+  const timer = setInterval(check, 60000);
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') check();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('focus', check);
+  window.addEventListener('online', check);
+
+  return () => {
+    stopped = true;
+    clearTimeout(first);
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange', onVisible);
+    window.removeEventListener('focus', check);
+    window.removeEventListener('online', check);
+  };
 }
 
 export function initSocket() {
@@ -78,14 +156,25 @@ export function initSocket() {
 
   socket.on('app:hello', (payload = {}) => {
     if (payload.release) {
-      state.release = payload.release;
       handleRelease(payload.release);
+      state.release = payload.release;
     }
     if (typeof payload.online === 'number') setOnline(payload.online);
   });
 
   socket.on('app:release', (payload = {}) => {
-    if (payload.release) handleRelease(payload.release);
+    if (payload.release) {
+      handleRelease(payload.release);
+      state.release = payload.release;
+    }
+  });
+
+  /* بعد انقطاع ثم عودة الاتصال: نتأكد أننا على نفس إصدار الخادم */
+  socket.on('reconnect', () => {
+    fetch('/api/public/version', { cache: 'no-store', credentials: 'same-origin' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (data && data.release) handleRelease(data.release); })
+      .catch(() => null);
   });
 
   socket.on('presence:update', (payload = {}) => {

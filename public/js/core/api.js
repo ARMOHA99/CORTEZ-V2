@@ -72,10 +72,10 @@ export const post = (path, body, options) => api(path, { ...options, method: 'PO
 export const patch = (path, body, options) => api(path, { ...options, method: 'PATCH', body });
 export const del = (path, options) => api(path, { ...options, method: 'DELETE' });
 
-export async function upload(file) {
+export async function upload(file, path = '/api/upload') {
   const form = new FormData();
   form.append('image', file);
-  return api('/api/upload', { method: 'POST', body: form });
+  return api(path, { method: 'POST', body: form });
 }
 
 export async function download(path, filename) {

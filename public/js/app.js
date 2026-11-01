@@ -6,7 +6,7 @@ import { state, applyMe, reset, emit, can } from './core/state.js';
 import { toast, countUp, installTilt } from './core/ui.js';
 import { initSound } from './core/sound.js';
 import { initShell, renderNav, renderUserChip, setActiveNav } from './core/shell.js';
-import { initSocket } from './core/socket.js';
+import { initSocket, watchRelease } from './core/socket.js';
 import { applyBrand } from './core/brand.js';
 import { openMemberCard } from './core/member-card.js';
 /* وحدات اختيارية: استيراد ثابت لملف غير مرفوع يمنع تحميل التطبيق كله.
@@ -23,6 +23,17 @@ function loadExtras() {
     ]).then(([palette, onduty, widgets, push]) => ({ palette, onduty, widgets, push }));
   }
   return extrasPromise;
+}
+
+/* بعد إعادة التحميل القسرية نُزيل بارامتر الإصدار من الرابط */
+try {
+  const currentUrl = new URL(window.location.href);
+  if (currentUrl.searchParams.has('_v')) {
+    currentUrl.searchParams.delete('_v');
+    window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+  }
+} catch (error) {
+  /* ignore */
 }
 
 const routes = {};
@@ -320,6 +331,7 @@ function initApp() {
   renderNav();
   renderUserChip();
   initSocket();
+  watchRelease();
   loadExtras().then((mods) => {
     if (mods.palette && mods.palette.initPalette) mods.palette.initPalette();
     if (mods.onduty && mods.onduty.initOnDuty) mods.onduty.initOnDuty();

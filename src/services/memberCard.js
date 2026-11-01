@@ -19,6 +19,31 @@ async function build(userId, viewer = null) {
     Discipline.find({ user: user._id, type: 'fine', status: 'active' }).select('amount').lean()
   ]);
 
+  /* الأوسمة التي حصل عليها العضو (الأحدث أولًا) لعرضها صغيرة على بطاقته */
+  let badgeItems = [];
+  try {
+    const Badge = require('../models/Badge');
+    const achievements = require('./achievements');
+    const rows = await Badge.find({ user: user._id }).sort({ awardedAt: -1 }).limit(40).lean();
+    badgeItems = rows
+      .map((row) => {
+        const def = achievements.BY_KEY.get(row.key);
+        if (!def) return null;
+        return {
+          key: row.key,
+          name: def.name,
+          icon: def.icon,
+          color: def.color,
+          tier: def.tier,
+          shape: def.shape,
+          awardedAt: row.awardedAt
+        };
+      })
+      .filter(Boolean);
+  } catch (error) {
+    badgeItems = [];
+  }
+
   const operations = user.stats ? user.stats.operations || 0 : 0;
   const wins = user.stats ? user.stats.wins || 0 : 0;
   const losses = user.stats ? user.stats.losses || 0 : 0;
@@ -82,6 +107,10 @@ async function build(userId, viewer = null) {
       signed: Boolean(user.bloodPact && user.bloodPact.signed),
       version: user.bloodPact ? user.bloodPact.version : 0,
       signedAt: user.bloodPact ? user.bloodPact.signedAt : null
+    },
+    badges: {
+      total: badgeItems.length,
+      items: badgeItems.slice(0, 5)
     },
     motto: config.org.motto,
     org: 'CORTEZ',

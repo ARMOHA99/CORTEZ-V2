@@ -131,6 +131,16 @@ router.get(
       ? `سلسلة ${streakDays} يوم متتالٍ على الدوام • ${hours} إجمالي • ${ops} عملية`
       : `${hours} ساعات دوام • ${ops} عملية • ${wins} انتصار`;
 
+    /* أوسمة الإنجازات: أيقونات صغيرة بلون كل وسام */
+    const badgeItems = Array.isArray(card.badges?.items) ? card.badges.items : [];
+    const badgeTotal = Number(card.badges?.total || badgeItems.length);
+    const badgeHtml = badgeItems
+      .map(
+        (item) =>
+          `<span class="badge-chip" style="--bc:${escapeHtml(item.color || '#e63946')}" title="${escapeHtml(item.name)}"><span class="badge-ico">${escapeHtml(item.icon)}</span><span class="badge-name">${escapeHtml(item.name)}</span></span>`
+      )
+      .join('');
+
     const medalHtml = medals
       .map(
         (medal) =>
@@ -179,6 +189,10 @@ router.get(
   .medal-success{color:#a7f3c9;border-color:rgba(46,204,113,.4);background:rgba(46,204,113,.1)}
   .medal-warning{color:#ffd9a3;border-color:rgba(245,166,35,.4);background:rgba(245,166,35,.1)}
   .medal-danger{color:#ffb3bb;border-color:rgba(230,57,70,.5);background:rgba(230,57,70,.14)}
+  .badges-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .badge-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;color:var(--text);background:color-mix(in srgb,var(--bc) 16%,transparent);border:1px solid color-mix(in srgb,var(--bc) 45%,transparent)}
+  .badge-ico{font-size:13px;line-height:1}
+  .badge-more{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:11px;color:var(--muted);border:1px solid var(--line);background:rgba(255,255,255,.03)}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;border:1px solid transparent}
   .btn-primary{background:var(--primary);color:#fff}
@@ -201,6 +215,7 @@ router.get(
         <span class="pill">🏆 ${winRate}% فوز</span>
         ${streakDays ? `<span class="pill streak">🔥 سلسلة <b>${streakDays}</b> يوم</span>` : ''}
       </div>
+      ${badgeHtml ? `<div class="badges-row">${badgeHtml}${badgeTotal > badgeItems.length ? `<span class="badge-more">+${badgeTotal - badgeItems.length}</span>` : ''}</div>` : ''}
       ${medalHtml ? `<div class="medals">${medalHtml}</div>` : ''}
       <div class="actions">
         <a class="btn btn-primary" href="${escapeHtml(imageUrl)}" download="cortez-${escapeHtml(data.id)}.png">تحميل البطاقة</a>
