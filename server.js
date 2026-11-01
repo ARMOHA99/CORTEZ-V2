@@ -189,6 +189,7 @@ h1{font-size:22px;margin-bottom:10px}p{color:#9b9296;line-height:1.7;margin:4px 
     const csrfToken = req.session ? req.session.csrfToken || '' : '';
     const html = htmlTemplate
       .replace(/__RELEASE__/g, release.version)
+      .replace(/__RELEASE_SHORT__/g, release.version.slice(0, 7))
       .replace(/__CSRF__/g, csrfToken);
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.type('html').send(html);
