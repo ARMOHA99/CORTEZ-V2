@@ -236,6 +236,71 @@
   <div id="global-loading" class="global-loading hidden"><div class="loader-ring"></div></div>
 
   <script src="/socket.io/socket.io.js"></script>
+
+  <!-- حارس الإصدار: يعمل حتى لو كانت ملفات الجافاسكربت القديمة معلّقة في الكاش -->
+  <script>
+    (function () {
+      var meta = document.querySelector('meta[name="release"]');
+      var own = meta && meta.content && meta.content !== '__RELEASE__' ? String(meta.content) : '';
+      if (!own) return;
+      window.__CORTEZ_BOOT_RELEASE__ = own;
+      var busy = false;
+
+      function hardReload(next) {
+        if (busy) return;
+        busy = true;
+        try { sessionStorage.setItem('cortez.reloaded', next); } catch (e) {}
+        var go = function () {
+          try {
+            var url = new URL(window.location.href);
+            url.searchParams.set('_v', next);
+            window.location.replace(url.toString());
+          } catch (e) { window.location.reload(); }
+        };
+        var jobs = [];
+        /* مسح الكاش كافٍ: الـ Service Worker صار يجلب من الشبكة أولًا،
+           ولا نُلغي تسجيله حتى لا تُفقد اشتراكات الإشعارات */
+        if (window.caches && window.caches.keys) {
+          jobs.push(
+            window.caches.keys()
+              .then(function (keys) { return Promise.all(keys.map(function (k) { return window.caches.delete(k).catch(function () {}); })); })
+              .catch(function () {})
+          );
+        }
+        Promise.all(jobs).then(go, go);
+        setTimeout(go, 2500);
+      }
+
+      function check() {
+        if (busy) return;
+        fetch('/api/public/version', { cache: 'no-store', credentials: 'same-origin' })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function (data) {
+            if (!data || !data.release || String(data.release) === own) return;
+            try { if (sessionStorage.getItem('cortez.reloaded') === String(data.release)) return; } catch (e) {}
+            var el = document.activeElement;
+            var typing = el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+            if (typing) { setTimeout(function () { hardReload(String(data.release)); }, 1500); return; }
+            hardReload(String(data.release));
+          })
+          .catch(function () {});
+      }
+
+      setTimeout(check, 3000);
+      setInterval(check, 25000);
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+      window.addEventListener('focus', check);
+      window.addEventListener('online', check);
+      window.__cortezVersionGuard = { check: check, own: own, reload: hardReload };
+
+      /* تحديث ملف الـ Service Worker نفسه حتى لا يبقى قديمًا */
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations()
+          .then(function (regs) { regs.forEach(function (r) { if (r.update) r.update().catch(function () {}); }); })
+          .catch(function () {});
+      }
+    })();
+  </script>
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

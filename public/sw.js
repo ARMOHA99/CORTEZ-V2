@@ -1,5 +1,5 @@
 /* CORTEZ — Service Worker: قشرة تعمل بلا اتصال + استقبال الإشعارات */
-const CACHE = 'cortez-shell-v1';
+const CACHE = 'cortez-shell-v2';
 const SHELL = ['/css/style.css', '/css/views.css', '/css/extras.css', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -17,6 +17,9 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => clients.forEach((client) => client.postMessage({ type: 'sw:activated', cache: CACHE })))
+      .catch(() => null)
   );
 });
 
@@ -47,19 +50,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  /* الأصول (js/css/صور): الشبكة أولاً حتى يصل أي تحديث فورًا، والكاش احتياط فقط */
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => null);
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => null);
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then((cached) => cached || Response.error()))
   );
 });
 

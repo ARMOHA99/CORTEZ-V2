@@ -34,6 +34,10 @@ export function getBootRelease() {
 function forceRefresh(release) {
   if (refreshing) return;
   refreshing = true;
+  if (window.__cortezVersionGuard && typeof window.__cortezVersionGuard.reload === 'function') {
+    window.__cortezVersionGuard.reload(String(release));
+    return;
+  }
   try {
     sessionStorage.setItem('cortez.reloaded', release);
   } catch (error) {
@@ -81,6 +85,10 @@ function handleRelease(release) {
 /* مراقبة الإصدار: تعمل حتى لو تعذّر الاتصال بـ Socket.io */
 export function watchRelease() {
   if (!bootRelease) return () => {};
+  /* الحارس المضمّن في الصفحة أدقّ لأنه يمسح الكاش والـ SW قبل التحديث */
+  if (window.__cortezVersionGuard && typeof window.__cortezVersionGuard.reload === 'function') {
+    return () => {};
+  }
   let stopped = false;
 
   const check = async () => {
