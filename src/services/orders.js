@@ -28,6 +28,29 @@ async function buildItems(rawItems, scope) {
   const items = [];
   for (const raw of rawItems.slice(0, 30)) {
     const qty = Math.max(1, Math.min(99, Math.round(Number(raw.qty) || 1)));
+
+    /* عنصر من سوق الأعضاء (المتجر الداخلي فقط) */
+    if (raw.listingId) {
+      if (scope !== 'internal') continue;
+      const MarketListing = require('../models/MarketListing');
+      const listing = await MarketListing.findById(raw.listingId).catch(() => null);
+      if (!listing || listing.status !== 'active') continue;
+      if (listing.remaining !== null && listing.remaining !== undefined && listing.remaining < qty) {
+        throw httpError(400, `الكمية المتبقية من «${listing.name}» غير كافية`, 'STOCK');
+      }
+      if (!items.find((item) => String(item.listing) === String(listing._id))) {
+        items.push({
+          product: null,
+          listing: listing._id,
+          name: listing.name,
+          price: Number(listing.price) || 0,
+          qty,
+          total: (Number(listing.price) || 0) * qty
+        });
+      }
+      continue;
+    }
+
     const product = await Product.findById(raw.productId || raw.product).catch(() => null);
     if (!product || !product.active) continue;
     if (scope === 'external' && !['external', 'both'].includes(product.scope)) continue;
@@ -130,6 +153,15 @@ async function updateStatus({ orderId, status, user, note = '' }) {
   });
   await order.save();
 
+  /* عند الإكمال: يُخصم المخزون فعليًا، وتُسجّل مبيعات سوق الأعضاء وعمولتها */
+  if (status === 'completed') {
+    try {
+      await settleOrder(order, user);
+    } catch (error) {
+      console.error('[Orders] تعذّر تسوية الطلب:', error.message);
+    }
+  }
+
   realtime.emit('orders:update', { action: 'status', orderId: String(order._id), code: order.code, status });
   realtime.emit('dashboard:refresh', { reason: 'order-status' });
   if (order.user) {
@@ -148,6 +180,42 @@ async function updateStatus({ orderId, status, user, note = '' }) {
     });
   }
   return order;
+}
+
+/* تسوية الطلب بعد الإكمال: خصم المخزون، ثم تسجيل مبيعات السوق وعمولاتها */
+async function settleOrder(order, user) {
+  if (order.settledAt) return;
+  const Product = require('../models/Product');
+  const market = require('./market');
+
+  for (const item of order.items || []) {
+    const qty = Math.max(1, Number(item.qty) || 1);
+    if (item.product) {
+      await Product.updateOne(
+        { _id: item.product, stock: { $ne: null } },
+        { $inc: { stock: -qty } }
+      ).catch(() => null);
+      await Product.updateOne(
+        { _id: item.product, stock: { $lt: 0 } },
+        { $set: { stock: 0 } }
+      ).catch(() => null);
+    }
+    if (item.listing) {
+      try {
+        await market.recordSale({
+          listingId: item.listing,
+          qty,
+          order,
+          buyer: order.user || null
+        });
+      } catch (error) {
+        console.error('[Orders] تعذّر تسجيل بيع السوق:', error.message);
+      }
+    }
+  }
+
+  order.settledAt = new Date();
+  await order.save().catch(() => null);
 }
 
 function serializePublic(order) {

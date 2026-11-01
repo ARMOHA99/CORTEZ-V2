@@ -50,6 +50,16 @@ function defaultSettings() {
     'store.externalTitle': 'المتجر الخارجي',
     'store.externalDescription': 'يمكن للجميع تقديم طلب عبر هذا المتجر',
     'store.internalEnabled': config.features.internalStore,
+    /* سوق الأعضاء داخل المتجر الداخلي */
+    'market.enabled': true,
+    'market.maxPerWeek': 2,
+    'market.commissionPercent': 10,
+    'market.requireApproval': true,
+    'market.maxQty': 5,
+    'market.durationDays': 14,
+    'market.minPrice': 1,
+    'market.maxPrice': 100000,
+    'market.minRankLevel': 20,
     'leaderboard.public': false,
     'discipline.discordNotify': true,
     'votes.discordNotify': true

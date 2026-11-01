@@ -4,7 +4,7 @@
  */
 import { get, post, patch, del, upload } from '../core/api.js';
 import { state, can } from '../core/state.js';
-import { esc, num, pageHeader, openModal, confirmDialog, promptDialog, toast, debounce, timeAgo, emptyState, badge, statusBadge } from '../core/ui.js';
+import { esc, num, date, pageHeader, openModal, confirmDialog, promptDialog, toast, debounce, timeAgo, emptyState, badge, statusBadge } from '../core/ui.js';
 import { applyBrand } from '../core/brand.js';
 import { mountPicker } from '../core/picker.js';
 import * as sound from '../core/sound.js';
@@ -613,6 +613,8 @@ async function tabStore(box) {
   let s = {};
   const canSettings = can('settings:manage');
   if (canSettings) { try { s = (await get('/api/admin/settings')).settings || {}; } catch (e) { s = {}; } }
+  let marketReview = { items: [] };
+  try { marketReview = await get('/api/market/review'); } catch (e) { marketReview = { items: [] }; }
   let pendingExternal = null;
   let totalExternal = null;
   try {
@@ -642,7 +644,42 @@ async function tabStore(box) {
         ${canSettings ? sw('intOpen', 'المتجر الداخلي مفتوح للأعضاء', s['store.internalEnabled'] !== false) : ''}
         <p class="adm-note">يطلب منه الأعضاء الذين يملكون صلاحية «طلب العتاد من المتجر الداخلي». تظهر طلباتهم في غرفة «الطلبات» تحت تبويب المتجر الداخلي.</p>
       </div></div>
+
+      <div class="card"><div class="card-body adm-form">
+        <h3>سوق الأعضاء</h3>
+        <p class="adm-note">يسمح للأعضاء بعرض منتجاتهم داخل المتجر الداخلي. كل بيع يُخصم منه عمولة تدخل الخزينة تلقائيًا.</p>
+        ${canSettings ? `
+          ${sw('mkOpen', 'سوق الأعضاء مفتوح', s['market.enabled'] !== false)}
+          ${sw('mkApproval', 'إعلانات الأعضاء تحتاج موافقة القيادة', s['market.requireApproval'] !== false)}
+          <div class="adm-grid">
+            <label>عدد الإعلانات في الأسبوع<input type="number" name="mkPerWeek" min="0" max="50" value="${Number(s['market.maxPerWeek'] ?? 2)}" /></label>
+            <label>نسبة العمولة %<input type="number" name="mkCommission" min="0" max="50" value="${Number(s['market.commissionPercent'] ?? 10)}" /></label>
+            <label>أقصى كمية في الإعلان<input type="number" name="mkMaxQty" min="1" max="99" value="${Number(s['market.maxQty'] ?? 5)}" /></label>
+            <label>مدة العرض (أيام)<input type="number" name="mkDays" min="1" max="90" value="${Number(s['market.durationDays'] ?? 14)}" /></label>
+            <label>أدنى سعر<input type="number" name="mkMinPrice" min="1" value="${Number(s['market.minPrice'] ?? 1)}" /></label>
+            <label>أقصى سعر<input type="number" name="mkMaxPrice" min="1" value="${Number(s['market.maxPrice'] ?? 100000)}" /></label>
+            <label>أدنى مستوى رتبة للعرض<input type="number" name="mkRank" min="0" max="1000" value="${Number(s['market.minRankLevel'] ?? 20)}" /></label>
+          </div>
+          <div class="adm-actions"><button class="btn btn-primary btn-sm" id="mk-save-settings" type="button">حفظ إعدادات السوق</button></div>` : '<p class="adm-note">لا تملك صلاحية تعديل إعدادات السوق.</p>'}
+      </div></div>
     </div>
+
+    <div class="card" style="margin-bottom:16px"><div class="card-body">
+      <h3>مراجعة إعلانات السوق</h3>
+      ${(marketReview.items || []).length ? `<div style="overflow-x:auto"><table class="table"><thead><tr><th>المنتج</th><th>العضو</th><th>السعر</th><th>الكمية</th><th>الحالة</th><th>تاريخ</th><th></th></tr></thead><tbody>
+        ${marketReview.items.map((m) => `<tr>
+          <td><strong>${esc(m.name)}</strong>${m.adminNote ? `<div class="adm-note">${esc(m.adminNote)}</div>` : ''}</td>
+          <td>${esc(m.sellerName)}</td>
+          <td>${num(m.price)}</td>
+          <td>${num(m.remaining)} / ${num(m.qty)}</td>
+          <td>${badge({ pending: 'بانتظار الموافقة', active: 'معروض', paused: 'موقوف', rejected: 'مرفوض', sold: 'نُفد', expired: 'منتهي', cancelled: 'ملغى' }[m.status] || m.status, m.status === 'active' ? 'success' : m.status === 'pending' ? 'warning' : m.status === 'rejected' ? 'danger' : '')}</td>
+          <td class="muted">${esc(date(m.createdAt))}</td>
+          <td><div class="adm-actions">
+            ${m.status !== 'active' ? `<button class="btn btn-ghost btn-sm" data-mk-ok="${esc(m._id)}" type="button">موافقة</button>` : ''}
+            ${['pending', 'active', 'paused'].includes(m.status) ? `<button class="btn btn-ghost btn-sm" data-mk-no="${esc(m._id)}" type="button">رفض</button>` : ''}
+          </div></td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="adm-note">لا إعلانات في السوق بعد.</p>'}
+    </div></div>
     <div class="adm-actions" style="margin-bottom:14px"><button class="btn btn-primary" id="pr-new" type="button">+ منتج جديد</button></div>
     <div class="card"><div class="card-body" style="overflow-x:auto">
       ${items.length ? `<table class="table"><thead><tr><th>المنتج</th><th>الفئة</th><th>السعر</th><th>المخزون</th><th>يظهر في</th><th>الحالة</th><th></th></tr></thead><tbody>
@@ -679,6 +716,38 @@ async function tabStore(box) {
       catch (e) { toast(e.message, 'danger'); event.target.checked = !event.target.checked; }
     });
   }
+  const mkSave = box.querySelector('#mk-save-settings');
+  if (mkSave) {
+    mkSave.addEventListener('click', async () => {
+      try {
+        await saveSettingEntries({
+          'market.enabled': box.querySelector('[name="mkOpen"]').checked,
+          'market.requireApproval': box.querySelector('[name="mkApproval"]').checked,
+          'market.maxPerWeek': Number(box.querySelector('[name="mkPerWeek"]').value) || 0,
+          'market.commissionPercent': Number(box.querySelector('[name="mkCommission"]').value) || 0,
+          'market.maxQty': Number(box.querySelector('[name="mkMaxQty"]').value) || 1,
+          'market.durationDays': Number(box.querySelector('[name="mkDays"]').value) || 14,
+          'market.minPrice': Number(box.querySelector('[name="mkMinPrice"]').value) || 1,
+          'market.maxPrice': Number(box.querySelector('[name="mkMaxPrice"]').value) || 100000,
+          'market.minRankLevel': Number(box.querySelector('[name="mkRank"]').value) || 0
+        });
+        sound.success();
+        toast('تم حفظ إعدادات السوق', 'success');
+      } catch (e) { sound.error(); toast(e.message, 'danger'); }
+    });
+  }
+  box.querySelectorAll('[data-mk-ok]').forEach((b) => b.addEventListener('click', async () => {
+    try {
+      await post(`/api/market/${b.dataset.mkOk}/review`, { approve: true });
+      sound.success(); toast('تمت الموافقة على الإعلان', 'success'); reload();
+    } catch (e) { toast(e.message, 'danger'); }
+  }));
+  box.querySelectorAll('[data-mk-no]').forEach((b) => b.addEventListener('click', async () => {
+    try {
+      await post(`/api/market/${b.dataset.mkNo}/review`, { approve: false, note: 'راجع شروط السوق' });
+      toast('تم رفض الإعلان', 'success'); reload();
+    } catch (e) { toast(e.message, 'danger'); }
+  }));
   box.querySelector('#pr-new').addEventListener('click', () => openProductModal(null, reload));
   box.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openProductModal(items.find((p) => idOf(p) === b.dataset.edit), reload)));
   box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {

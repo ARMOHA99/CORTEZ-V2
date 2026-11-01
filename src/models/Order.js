@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const orderItemSchema = new mongoose.Schema(
   {
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+    /* إن كان العنصر من سوق الأعضاء */
+    listing: { type: mongoose.Schema.Types.ObjectId, ref: 'MarketListing', default: null },
     name: { type: String, required: true, trim: true, maxlength: 120 },
     price: { type: Number, default: 0, min: 0 },
     qty: { type: Number, required: true, min: 1, max: 999 },
@@ -43,6 +45,8 @@ const orderSchema = new mongoose.Schema(
     staffNote: { type: String, default: '', maxlength: 600 },
     handledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     handledByName: { type: String, default: '' },
+    /* تُضبط مرة واحدة عند خصم المخزون وتسوية مبيعات السوق */
+    settledAt: { type: Date, default: null },
     history: { type: [orderHistorySchema], default: [] }
   },
   {

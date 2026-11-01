@@ -363,6 +363,7 @@ async function loadRoute(hash) {
     '#/store-internal': () => import('./views/store.js'),
     '#/orders': () => import('./views/orders.js'),
     '#/members': () => import('./views/members.js'),
+    '#/achievements': () => import('./views/achievements.js'),
     '#/leaderboard': () => import('./views/leaderboard.js'),
     '#/votes': () => import('./views/votes.js'),
     '#/tickets': () => import('./views/tickets.js'),

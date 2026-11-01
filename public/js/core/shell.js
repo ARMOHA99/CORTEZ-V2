@@ -23,6 +23,7 @@ const NAV = [
   ]},
   { group: 'العائلة', items: [
     { id: 'members', label: 'سجل الأعضاء', icon: '◈', route: '#/members', perm: 'members:view' },
+    { id: 'achievements', label: 'الأوسمة', icon: '🏅', route: '#/achievements' },
     { id: 'discipline', label: 'سجل الانضباط', icon: '⚠', route: '#/discipline', perm: 'discipline:view' },
     { id: 'tickets', label: 'التذاكر', icon: '✉', route: '#/tickets' },
     { id: 'pacts', label: 'عقد الدم', icon: '✒', route: '#/pacts', perm: 'pacts:view' }
