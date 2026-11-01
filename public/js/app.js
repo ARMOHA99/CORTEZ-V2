@@ -5,7 +5,7 @@ import { api, get, post, setCsrf } from './core/api.js';
 import { state, applyMe, reset, emit, can } from './core/state.js';
 import { toast, countUp, installTilt } from './core/ui.js';
 import { initSound } from './core/sound.js';
-import { initShell, renderNav, renderUserChip, setActiveNav } from './core/shell.js';
+import { initShell, renderNav, renderUserChip, setActiveNav, paintRelease } from './core/shell.js';
 import { initSocket, watchRelease } from './core/socket.js';
 import { applyBrand } from './core/brand.js';
 import { openMemberCard } from './core/member-card.js';
@@ -328,6 +328,7 @@ async function boot() {
 }
 
 function initApp() {
+  paintRelease();
   renderNav();
   renderUserChip();
   initSocket();

@@ -118,6 +118,16 @@ export function renderNotifications() {
   }
 }
 
+/* وسم الإصدار في الشريط الجانبي: يثبت أن الصفحة تعمل بآخر إصدار منشور */
+export function paintRelease() {
+  const el = document.getElementById('release-label');
+  if (!el) return;
+  const meta = document.querySelector('meta[name="release"]');
+  const value = String((meta && meta.content) || '').trim();
+  el.textContent = value && value !== '__RELEASE__' ? `v${value.slice(0, 7)}` : 'v—';
+  el.title = value ? `الإصدار ${value}` : 'إصدار غير معروف';
+}
+
 export function initShell() {
   const app = document.getElementById('app');
   const menuBtn = document.getElementById('menu-btn');
