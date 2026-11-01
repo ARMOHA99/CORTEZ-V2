@@ -100,8 +100,39 @@ async function buildApp() {
     });
   });
 
+  /* ملفات محركات البحث: تُبنى من النطاق الفعلي فتظل صحيحة عند تغيير الدومين */
+  function publicBaseUrl(req) {
+    const configured = (process.env.BASE_URL || '').trim();
+    if (configured) return configured.replace(/\/+$/, '');
+    return `${req.protocol}://${req.get('host')}`;
+  }
+
   app.get('/robots.txt', (req, res) => {
-    res.type('text/plain').send('User-agent: *\nDisallow: /api/\nDisallow: /auth/\n');
+    const base = publicBaseUrl(req);
+    res.type('text/plain').send([
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /api/',
+      'Disallow: /auth/',
+      '',
+      `Sitemap: ${base}/sitemap.xml`,
+      ''
+    ].join('\n'));
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    const base = publicBaseUrl(req);
+    const pages = [['/', '1.0', 'daily']];
+    const urls = pages.map(([route, priority, freq]) => [
+      '  <url>',
+      `    <loc>${base}${route}</loc>`,
+      `    <changefreq>${freq}</changefreq>`,
+      `    <priority>${priority}</priority>`,
+      '  </url>'
+    ].join('\n')).join('\n');
+    res.type('application/xml').send(
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
+    );
   });
 
   app.all('/api/*', (req, res) => {
