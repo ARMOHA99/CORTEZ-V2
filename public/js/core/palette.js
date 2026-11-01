@@ -212,3 +212,9 @@ export function initPalette() {
     }
   });
 }
+
+/** فتح لوحة الأوامر من زر في الواجهة (نفس اختصار Ctrl+K) */
+export function openPalette() {
+  if (!overlay) initPalette();
+  if (!overlay.classList.contains('is-open')) open();
+}

@@ -251,6 +251,8 @@ async function boot() {
   loadExtras().then((mods) => mods.push && mods.push.initServiceWorker && mods.push.initServiceWorker());
   window.addEventListener('hashchange', onAnyHashChange);
   await loadPublicConfig();
+  /* شريط «الآن في الدوام» يظهر للزوار أيضًا حتى تكون الحالة الحيّة مرئية قبل الدخول */
+  loadExtras().then((mods) => mods.onduty && mods.onduty.initOnDuty && mods.onduty.initOnDuty());
   const params = new URLSearchParams(location.search);
   if (params.get('error')) {
     const err = document.getElementById('landing-error');
@@ -303,6 +305,10 @@ function initApp() {
   loadExtras().then((mods) => {
     if (mods.palette && mods.palette.initPalette) mods.palette.initPalette();
     if (mods.onduty && mods.onduty.initOnDuty) mods.onduty.initOnDuty();
+    const cmdk = document.getElementById('cmdk-btn');
+    if (cmdk && mods.palette && mods.palette.openPalette) {
+      cmdk.addEventListener('click', () => mods.palette.openPalette());
+    }
   });
   appInitialized = true;
   onHashChange();
