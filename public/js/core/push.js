@@ -12,7 +12,10 @@ export function pushSupported() {
 export async function initServiceWorker() {
   if (!('serviceWorker' in navigator)) return null;
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+    const meta = document.querySelector('meta[name="release"]');
+    const version = String((meta && meta.content) || '').trim();
+    const swUrl = version && version !== '__RELEASE__' ? `/sw.js?v=${version}` : '/sw.js';
+    const registration = await navigator.serviceWorker.register(swUrl, { scope: '/', updateViaCache: 'none' });
     return registration;
   } catch (error) {
     console.warn('[Push] تعذّر تسجيل عامل الخدمة:', error.message);
