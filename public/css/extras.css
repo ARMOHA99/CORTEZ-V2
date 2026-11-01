@@ -442,3 +442,12 @@ html.cmdk-lock { overflow: hidden; }
   .on-duty-bar { bottom: 78px; max-width: 56vw; padding: 7px 11px; font-size: 12px; }
   .on-duty-bar .od-list { display: none; }
 }
+
+/* معاينة صورة المنتج داخل نموذج الإدارة */
+.prod-preview {
+  width: 100%; max-width: 180px; aspect-ratio: 4 / 3; margin: 6px 0 10px;
+  border-radius: 10px; overflow: hidden; border: 1px solid var(--line, rgba(255,255,255,.1));
+  background: #0d0d10;
+}
+.prod-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.prod-preview.hidden { display: none; }

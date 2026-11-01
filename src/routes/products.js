@@ -11,12 +11,33 @@ function dbReady() {
   return mongoose.connection.readyState === 1;
 }
 
-function validateImage(value) {
-  const image = String(value || '').trim();
+/* الروابط المقبولة: ملفات محفوظة على القرص، أو صور محفوظة في قاعدة البيانات
+   (/api/upload/file/<id>)، أو روابط خارجية آمنة. */
+function normalizeImageUrl(value) {
+  let image = String(value || '').trim().replace(/\\/g, '/');
   if (!image) return '';
-  if (image.startsWith('/uploads/') || image.startsWith('https://') || image.startsWith('http://localhost')) {
-    return image.slice(0, 500);
+  /* بعض الواجهات تحفظ المسار النسبي بلا شرطة البداية */
+  if (image.startsWith('api/')) image = '/' + image;
+  return image;
+}
+
+const DB_IMAGE_PATTERN = /^\/api\/upload\/file\/[a-f0-9]{24}$/i;
+const LOCAL_IMAGE_PATTERN = /^\/uploads\/[A-Za-z0-9._-]+$/;
+
+function isAllowedImageUrl(image) {
+  /* صورة محفوظة في قاعدة البيانات: معرّف MongoDB فقط، لا مسارات ملتوية */
+  if (DB_IMAGE_PATTERN.test(image)) return true;
+  if (image.startsWith('/uploads/')) return LOCAL_IMAGE_PATTERN.test(image);
+  if (image.startsWith('https://') || image.startsWith('http://localhost')) {
+    return !/[\s"'<>]/.test(image);
   }
+  return false;
+}
+
+function validateImage(value) {
+  const image = normalizeImageUrl(value);
+  if (!image) return '';
+  if (isAllowedImageUrl(image)) return image.slice(0, 500);
   throw httpError(400, 'رابط الصورة غير صالح', 'INVALID_IMAGE');
 }
 
@@ -24,9 +45,9 @@ function validateGallery(list) {
   if (!Array.isArray(list)) return [];
   const clean = [];
   for (const raw of list.slice(0, 6)) {
-    const value = String(raw || '').trim();
+    const value = normalizeImageUrl(raw);
     if (!value) continue;
-    if (!(value.startsWith('/uploads/') || value.startsWith('https://') || value.startsWith('http://localhost'))) {
+    if (!isAllowedImageUrl(value)) {
       throw httpError(400, 'رابط صورة غير صالح في المعرض', 'INVALID_IMAGE');
     }
     clean.push(value.slice(0, 500));

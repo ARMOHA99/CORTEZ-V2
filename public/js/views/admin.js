@@ -500,6 +500,7 @@ function openProductModal(product, reload) {
         </div>
         <label>الوصف<textarea name="description" maxlength="800">${esc(p.description || '')}</textarea></label>
         <label>صورة المنتج (رابط)<input type="text" name="image" id="prod-image" value="${esc(p.image || '')}" /></label>
+        <div class="prod-preview ${p.image ? '' : 'hidden'}" id="prod-preview"><img id="prod-preview-img" src="${esc(p.image || '')}" alt="" /></div>
         <input class="adm-input" type="file" id="prod-file" accept="image/png,image/jpeg,image/webp,image/gif" />
         <label>صور إضافية للمعرض (رابط في كل سطر — حتى 6 صور)
           <textarea name="gallery" id="prod-gallery" rows="3" placeholder="https://...
@@ -516,7 +517,15 @@ https://...">${esc((Array.isArray(p.gallery) ? p.gallery : []).join('\n'))}</tex
   modal.el.querySelector('#prod-file').addEventListener('change', async (event) => {
     const picked = event.target.files && event.target.files[0];
     if (!picked) return;
-    try { const file = await shrinkImage(picked); const res = await upload(file); form.image.value = res.url; toast(res.note || 'تم رفع الصورة', res.note ? 'warning' : 'success'); } catch (e) { toast(e.message, 'danger'); }
+    try {
+      const file = await shrinkImage(picked);
+      const res = await upload(file);
+      form.image.value = res.url;
+      const box = modal.el.querySelector('#prod-preview');
+      const img = modal.el.querySelector('#prod-preview-img');
+      if (box && img) { img.src = res.url; box.classList.remove('hidden'); }
+      toast(res.note || 'تم رفع الصورة', res.note ? 'info' : 'success');
+    } catch (e) { toast(e.message, 'danger'); }
   });
   modal.el.querySelector('#prod-gallery-file').addEventListener('change', async (event) => {
     const files = Array.from(event.target.files || []).slice(0, 6);

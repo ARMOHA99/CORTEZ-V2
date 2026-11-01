@@ -20,8 +20,21 @@ const upload = multer({
   }
 });
 
+/* أسماء السحابة في Cloudinary حروف صغيرة فقط. أي اسم غير صالح أو نائب
+   (root / cloud / default...) يُعتبر غير مهيّأ، فتُحفظ الصورة داخل الموقع
+   مباشرة بلا محاولة فاشلة ولا رسالة تحذير مزعجة. */
+const PLACEHOLDER_CLOUD_NAMES = ['root', 'cloud', 'default', 'demo', 'test', 'mycloud'];
+
+function cloudNameLooksValid(name) {
+  const value = String(name || '').trim();
+  if (!value) return false;
+  if (value !== value.toLowerCase()) return false;
+  if (!/^[a-z][a-z0-9_-]{2,}$/.test(value)) return false;
+  return !PLACEHOLDER_CLOUD_NAMES.includes(value);
+}
+
 const cloudinaryConfigured = Boolean(
-  config.cloudinary.cloudName && config.cloudinary.apiKey && config.cloudinary.apiSecret
+  cloudNameLooksValid(config.cloudinary.cloudName) && config.cloudinary.apiKey && config.cloudinary.apiSecret
 );
 
 function localUpload(buffer, originalName) {
@@ -108,7 +121,8 @@ router.post(
           console.error('[Upload] Cloudinary فشل:', lastReason);
         }
       }
-      if (!url) note = `تعذّر الرفع إلى Cloudinary (${lastReason}) فحُفظت الصورة في قاعدة البيانات بدلاً منه، وهي دائمة.`;
+      /* لو فشل Cloudinary بعد إعداد صحيح: الصورة تُحفظ داخل الموقع، والتنبيه هادئ */
+      if (!url) note = 'حُفظت الصورة داخل الموقع.';
     }
     if (!url && mongoReady()) {
       try {
