@@ -2050,12 +2050,14 @@ p {
 .toast-root {
   position: fixed;
   bottom: 22px;
-  left: 22px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 7000;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 9px;
-  max-width: min(360px, calc(100vw - 44px));
+  max-width: min(420px, calc(100vw - 44px));
   pointer-events: none;
 }
 
@@ -2708,6 +2710,7 @@ p {
 
 .product-card {
   position: relative;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius);
@@ -2715,6 +2718,11 @@ p {
   background: linear-gradient(165deg, rgba(25, 25, 31, 0.75), rgba(11, 11, 14, 0.92));
   overflow: hidden;
   transition: transform 0.35s var(--ease), border-color 0.3s, box-shadow 0.35s;
+}
+
+.product-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 
 .product-card:hover {
@@ -2744,6 +2752,20 @@ p {
 
 .product-card:hover .product-media img {
   transform: scale(1.06);
+}
+
+.product-media .media-count {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
 }
 
 .product-media .ph {
@@ -4203,7 +4225,7 @@ p {
   .duty-buttons .btn { flex: 1; min-width: 110px; }
   .landing-footer { padding-bottom: 90px; }
   .mc-stats { grid-template-columns: repeat(2, 1fr); }
-  .toast-root { left: 12px; right: 12px; max-width: none; }
+  .toast-root { top: 74px; bottom: auto; left: 12px; right: 12px; transform: none; max-width: none; align-items: stretch; }
   .cart-fab { bottom: 76px; left: 14px; }
   .member-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .attendance-table th,
@@ -4228,3 +4250,7 @@ p {
   .mobile-nav { display: none !important; }
   .app-main { margin: 0; }
 }
+
+/* أزرار أسفل بطاقة المنتج (تفاصيل + إضافة) */
+.product-foot .foot-actions { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.product-foot .foot-actions .btn { white-space: nowrap; }

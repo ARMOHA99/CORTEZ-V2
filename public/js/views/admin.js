@@ -480,7 +480,7 @@ async function tabMembers(box) {
 /* ═══════════════════════ المتجر ═══════════════════════ */
 function openProductModal(product, reload) {
   const editing = Boolean(product);
-  const p = product || { name: '', sku: '', description: '', category: 'other', scope: 'both', price: 0, cost: 0, stock: null, image: '', active: true, featured: false, order: 0 };
+  const p = product || { name: '', sku: '', description: '', category: 'other', scope: 'both', price: 0, cost: 0, stock: null, image: '', gallery: [], active: true, featured: false, order: 0 };
   const opts = (map, sel) => Object.entries(map).map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
   const modal = openModal({
     title: editing ? 'تعديل منتج' : 'منتج جديد',
@@ -501,6 +501,12 @@ function openProductModal(product, reload) {
         <label>الوصف<textarea name="description" maxlength="800">${esc(p.description || '')}</textarea></label>
         <label>صورة المنتج (رابط)<input type="text" name="image" id="prod-image" value="${esc(p.image || '')}" /></label>
         <input class="adm-input" type="file" id="prod-file" accept="image/png,image/jpeg,image/webp,image/gif" />
+        <label>صور إضافية للمعرض (رابط في كل سطر — حتى 6 صور)
+          <textarea name="gallery" id="prod-gallery" rows="3" placeholder="https://...
+https://...">${esc((Array.isArray(p.gallery) ? p.gallery : []).join('\n'))}</textarea>
+        </label>
+        <input class="adm-input" type="file" id="prod-gallery-file" accept="image/png,image/jpeg,image/webp,image/gif" multiple />
+        <p class="muted" style="font-size:11.5px">الصورة الأولى هي الرئيسية، والباقي يظهر كمصغّرات أسفلها في صفحة المنتج.</p>
         <div class="adm-row">${sw('active', 'مفعّل', p.active !== false)}${sw('featured', 'مميّز', Boolean(p.featured))}</div>
         <div class="adm-actions"><button class="btn btn-primary" type="submit">${editing ? 'حفظ' : 'إضافة'}</button></div>
       </form>`
@@ -512,14 +518,30 @@ function openProductModal(product, reload) {
     if (!picked) return;
     try { const file = await shrinkImage(picked); const res = await upload(file); form.image.value = res.url; toast(res.note || 'تم رفع الصورة', res.note ? 'warning' : 'success'); } catch (e) { toast(e.message, 'danger'); }
   });
+  modal.el.querySelector('#prod-gallery-file').addEventListener('change', async (event) => {
+    const files = Array.from(event.target.files || []).slice(0, 6);
+    if (!files.length) return;
+    const lines = form.gallery.value.split('\n').map((line) => line.trim()).filter(Boolean);
+    for (const picked of files) {
+      if (lines.length >= 6) { toast('الحد 6 صور للمعرض', 'warning'); break; }
+      try {
+        const file = await shrinkImage(picked);
+        const res = await upload(file);
+        if (res.url) lines.push(res.url);
+      } catch (e) { toast(e.message, 'danger'); }
+    }
+    form.gallery.value = lines.slice(0, 6).join('\n');
+    toast('أُضيفت ' + files.length + ' صورة للمعرض', 'success');
+  });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const gallery = form.gallery.value.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 6);
     const body = {
       name: form.name.value.trim(), sku: form.sku.value.trim(), description: form.description.value.trim(),
       category: form.category.value, scope: form.scope.value,
       price: Number(form.price.value) || 0, cost: Number(form.cost.value) || 0,
       stock: form.stock.value === '' ? null : Number(form.stock.value),
-      image: form.image.value.trim(), order: Number(form.order.value) || 0,
+      image: form.image.value.trim(), gallery, order: Number(form.order.value) || 0,
       active: form.active.checked, featured: form.featured.checked
     };
     try {

@@ -40,6 +40,13 @@ export async function render(root) {
 
   const currency = state.config?.system?.currencyLabel || 'دولار';
   const available = product.available !== false;
+  const images = [product.image, ...(Array.isArray(product.gallery) ? product.gallery : [])]
+    .map((src) => String(src || '').trim())
+    .filter(Boolean)
+    .slice(0, 7);
+  const categoryLabel = {
+    weapon: 'سلاح', drug: 'مواد', gear: 'عتاد', vehicle: 'مركبة', service: 'خدمة', other: 'أخرى'
+  }[product.category] || 'أخرى';
   const max = product.stock === null || product.stock === undefined ? 99 : Math.max(1, product.stock);
   let qty = 1;
 
@@ -47,8 +54,17 @@ export async function render(root) {
     <div class="product-detail">
       <a class="btn btn-ghost btn-sm" href="/#/shop">← المتجر</a>
       <div class="pd-grid">
-        <div class="pd-media ${product.image ? '' : 'is-empty'}">
-          ${product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)}" />` : '<span class="ph">■</span>'}
+        <div class="pd-gallery">
+          <div class="pd-media ${images.length ? '' : 'is-empty'}">
+            ${images.length
+              ? `<img src="${esc(images[0])}" alt="${esc(product.name)}" id="pd-main" />`
+              : '<span class="ph">■</span>'}
+          </div>
+          ${images.length > 1
+            ? `<div class="pd-thumbs" role="tablist" aria-label="صور المنتج">
+                ${images.map((src, i) => `<button type="button" role="tab" aria-selected="${i === 0}" class="pd-thumb ${i === 0 ? 'is-active' : ''}" data-src="${esc(src)}" aria-label="صورة ${i + 1}"><img src="${esc(src)}" alt="" /></button>`).join('')}
+              </div>`
+            : ''}
         </div>
         <div class="pd-body">
           <p class="eyebrow">${esc(String(product.category || 'ITEM').toUpperCase())}</p>
@@ -59,7 +75,14 @@ export async function render(root) {
               ${available ? (product.stock === null || product.stock === undefined ? 'متوفر' : `متوفر: ${num(product.stock)}`) : 'نفدت الكمية'}
             </span>
             ${product.sku ? `<span class="badge">${esc(product.sku)}</span>` : ''}
+            ${images.length > 1 ? `<span class="badge">${images.length} صور</span>` : ''}
           </div>
+          <ul class="pd-specs">
+            <li><span>الفئة</span><strong>${esc(categoryLabel)}</strong></li>
+            <li><span>الرمز</span><strong>${esc(product.sku || '—')}</strong></li>
+            <li><span>المخزون</span><strong>${product.stock === null || product.stock === undefined ? 'غير محدود' : num(product.stock)}</strong></li>
+            <li><span>الصور</span><strong>${images.length || 0}</strong></li>
+          </ul>
           <div class="pd-price">${num(product.price)} <small>${esc(currency)}</small></div>
           <div class="pd-buy">
             <div class="qty-stepper">
@@ -76,6 +99,18 @@ export async function render(root) {
         </div>
       </div>
     </div>`;
+
+  const mainImage = root.querySelector('#pd-main');
+  root.querySelectorAll('.pd-thumb').forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      if (mainImage) mainImage.src = thumb.dataset.src;
+      root.querySelectorAll('.pd-thumb').forEach((other) => {
+        const on = other === thumb;
+        other.classList.toggle('is-active', on);
+        other.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    });
+  });
 
   const qtyEl = root.querySelector('#qty');
   const totalEl = root.querySelector('#total');

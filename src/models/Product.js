@@ -10,6 +10,15 @@ const productSchema = new mongoose.Schema(
     price: { type: Number, default: 0, min: 0 },
     cost: { type: Number, default: 0, min: 0 },
     image: { type: String, default: '', maxlength: 500 },
+    /* صور إضافية للمعرض (حتى 6) — تُعرض كمصغّرات في صفحة المنتج */
+    gallery: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: (list) => Array.isArray(list) && list.length <= 6 && list.every((src) => String(src || '').length <= 500),
+        message: 'معرض الصور يقبل حتى 6 روابط بطول 500 حرف لكل رابط'
+      }
+    },
     stock: { type: Number, default: null, min: 0 },
     active: { type: Boolean, default: true, index: true },
     featured: { type: Boolean, default: false },

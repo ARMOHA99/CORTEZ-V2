@@ -29,22 +29,47 @@ export async function render(root) {
           ? emptyState('المتجر مغلق حالياً', 'عاود المحاولة لاحقاً')
           : (data.items || []).length
             ? data.items.map((p) => `
-              <div class="product-card">
-                <div class="product-media">${p.image ? `<img src="${esc(p.image)}" alt="" />` : '<span class="ph">■</span>'}</div>
+              <div class="product-card" data-open="${esc(p.sku || p._id)}" role="link" tabindex="0" aria-label="${esc(p.name)} — عرض التفاصيل">
+                <div class="product-media">${p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" />` : '<span class="ph">■</span>'}
+                  ${Array.isArray(p.gallery) && p.gallery.length ? `<span class="media-count">＋${p.gallery.length + (p.image ? 1 : 0)}</span>` : ''}
+                </div>
                 <div class="product-body">
                   <h4>${esc(p.name)}</h4>
                   <p>${esc(p.description || '')}</p>
                   <div class="product-foot">
                     <div class="price">${num(p.price)} <small>${esc(label)}</small></div>
-                    ${p.available === false
-                      ? '<span class="badge danger">نفدت الكمية</span>'
-                      : `<button class="btn btn-sm btn-primary" data-add="${esc(p._id)}" data-name="${esc(p.name)}" data-price="${p.price}" type="button">أضف</button>`}
+                    <div class="foot-actions">
+                      <button class="btn btn-ghost btn-sm" data-details="${esc(p.sku || p._id)}" type="button">التفاصيل</button>
+                      ${p.available === false
+                        ? '<span class="badge danger">نفدت الكمية</span>'
+                        : `<button class="btn btn-sm btn-primary" data-add="${esc(p._id)}" data-name="${esc(p.name)}" data-price="${p.price}" type="button">أضف</button>`}
+                    </div>
                   </div>
                 </div>
               </div>`).join('')
             : emptyState('لا منتجات حالياً', 'لم تُضف منتجات للمتجر الخارجي بعد')}
       </div>
       <button class="cart-fab" id="cart-fab" type="button"><span>🛒</span> السلة <span class="count" id="cart-count">${cartCount()}</span></button>`;
+
+    const openProduct = (key) => { if (key) location.hash = '#/shop/p/' + encodeURIComponent(key); };
+    root.querySelectorAll('[data-details]').forEach((btn) => {
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openProduct(btn.dataset.details);
+      });
+    });
+    root.querySelectorAll('[data-open]').forEach((card) => {
+      card.addEventListener('click', (event) => {
+        if (event.target.closest('[data-add]') || event.target.closest('[data-details]')) return;
+        openProduct(card.dataset.open);
+      });
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openProduct(card.dataset.open);
+        }
+      });
+    });
 
     root.querySelectorAll('[data-add]').forEach((btn) => {
       btn.addEventListener('click', () => {

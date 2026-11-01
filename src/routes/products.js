@@ -20,6 +20,20 @@ function validateImage(value) {
   throw httpError(400, 'رابط الصورة غير صالح', 'INVALID_IMAGE');
 }
 
+function validateGallery(list) {
+  if (!Array.isArray(list)) return [];
+  const clean = [];
+  for (const raw of list.slice(0, 6)) {
+    const value = String(raw || '').trim();
+    if (!value) continue;
+    if (!(value.startsWith('/uploads/') || value.startsWith('https://') || value.startsWith('http://localhost'))) {
+      throw httpError(400, 'رابط صورة غير صالح في المعرض', 'INVALID_IMAGE');
+    }
+    clean.push(value.slice(0, 500));
+  }
+  return clean;
+}
+
 router.get(
   '/',
   requireAuth,
@@ -64,6 +78,7 @@ router.post(
       price: Math.max(0, Math.round(Number(body.price) || 0)),
       cost: Math.max(0, Math.round(Number(body.cost) || 0)),
       image: validateImage(body.image),
+      gallery: validateGallery(body.gallery),
       stock: body.stock === '' || body.stock === null || body.stock === undefined ? null : Math.max(0, Math.round(Number(body.stock) || 0)),
       active: body.active !== false,
       featured: Boolean(body.featured),
@@ -103,6 +118,7 @@ router.patch(
     if (body.price !== undefined) product.price = Math.max(0, Math.round(Number(body.price) || 0));
     if (body.cost !== undefined) product.cost = Math.max(0, Math.round(Number(body.cost) || 0));
     if (body.image !== undefined) product.image = validateImage(body.image);
+    if (body.gallery !== undefined) product.gallery = validateGallery(body.gallery);
     if (body.stock !== undefined) {
       product.stock = body.stock === '' || body.stock === null ? null : Math.max(0, Math.round(Number(body.stock) || 0));
     }
