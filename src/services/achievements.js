@@ -524,7 +524,9 @@ async function award(user, list = null) {
   const Badge = require('../models/Badge');
   const existing = await Badge.find({ user: user._id }).select('key').lean();
   const owned = new Set(existing.map((row) => row.key));
-  const fresh = unlocked.filter((item) => !owned.has(item.key));
+  /* الأوسمة التي سحبها المسؤول لا تعود تلقائيًا */
+  const blocked = new Set((user.badgeBlocklist || []).map(String));
+  const fresh = unlocked.filter((item) => !owned.has(item.key) && !blocked.has(item.key));
   if (!fresh.length) return [];
 
   const created = [];
@@ -620,10 +622,99 @@ async function grant({ userId, key, byUser = null, note = '' }) {
   );
 }
 
-async function revoke({ userId, key }) {
+async function revoke({ userId, key, block = true }) {
   const Badge = require('../models/Badge');
-  await Badge.deleteOne({ user: userId, key });
+  const User = require('../models/User');
+  const def = BY_KEY.get(String(key));
+  if (!def) {
+    const error = new Error('وسام غير معروف');
+    error.status = 404;
+    throw error;
+  }
+  await Badge.deleteOne({ user: userId, key: def.key });
+  if (block) await User.updateOne({ _id: userId }, { $addToSet: { badgeBlocklist: def.key } });
+  try {
+    const notify = require('./notify');
+    await notify.push(userId, {
+      title: 'سُحب وسام',
+      body: `سُحب منك وسام «${def.name}»`,
+      type: 'warning',
+      link: '/#/achievements'
+    });
+  } catch (error) {
+    /* ignore */
+  }
   return true;
+}
+
+/* تصفير أوسمة عضو: تُمسح كلها وتُمنع من العودة تلقائيًا */
+async function reset({ userId }) {
+  const Badge = require('../models/Badge');
+  const User = require('../models/User');
+  const result = await Badge.deleteMany({ user: userId });
+  await User.updateOne({ _id: userId }, { $set: { badgeBlocklist: CATALOG.map((item) => item.key) } });
+  try {
+    const notify = require('./notify');
+    await notify.push(userId, {
+      title: 'أُعيد تصفير أوسمتك',
+      body: 'قامت القيادة بتصفير أوسمتك. تبدأ من جديد.',
+      type: 'warning',
+      link: '/#/achievements'
+    });
+  } catch (error) {
+    /* ignore */
+  }
+  return { removed: result.deletedCount || 0 };
+}
+
+/* إعادة السماح بالمنح التلقائي (مسح قائمة المنع) */
+async function allowAgain({ userId }) {
+  const User = require('../models/User');
+  const user = await User.findById(userId).select('badgeBlocklist').lean();
+  const cleared = (user && user.badgeBlocklist ? user.badgeBlocklist.length : 0);
+  await User.updateOne({ _id: userId }, { $set: { badgeBlocklist: [] } });
+  return { cleared };
+}
+
+/* لوحة المسؤول: كل الأوسمة مع حالة العضو فيها */
+async function manage(userId) {
+  const Badge = require('../models/Badge');
+  const User = require('../models/User');
+  const user = await User.findById(userId);
+  if (!user) {
+    const error = new Error('العضو غير موجود');
+    error.status = 404;
+    throw error;
+  }
+  const [owned, evaluated] = await Promise.all([wallet(userId), forUser(user)]);
+  const ownedMap = new Map(owned.map((row) => [row.key, row]));
+  const blocked = new Set((user.badgeBlocklist || []).map(String));
+  const items = evaluated.badges.map((badge) => ({
+    key: badge.key,
+    name: badge.name,
+    desc: badge.desc,
+    icon: badge.icon,
+    color: badge.color,
+    tier: badge.tier,
+    group: badge.group,
+    percent: badge.percent,
+    unlocked: badge.unlocked,
+    owned: ownedMap.has(badge.key),
+    blocked: blocked.has(badge.key),
+    awardedAt: ownedMap.has(badge.key) ? ownedMap.get(badge.key).awardedAt : null,
+    source: ownedMap.has(badge.key) ? ownedMap.get(badge.key).source : null
+  }));
+  return {
+    member: {
+      _id: String(user._id),
+      name: user.displayName || user.username || 'عضو',
+      rank: user.rank || '',
+      avatar: user.avatar || ''
+    },
+    items,
+    ownedCount: items.filter((item) => item.owned).length,
+    blockedCount: items.filter((item) => item.blocked).length
+  };
 }
 
 module.exports = {
@@ -638,5 +729,8 @@ module.exports = {
   leaders,
   grant,
   revoke,
+  reset,
+  allowAgain,
+  manage,
   addDays
 };

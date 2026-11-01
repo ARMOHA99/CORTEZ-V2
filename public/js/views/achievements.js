@@ -1,5 +1,5 @@
-import { get } from '../core/api.js';
-import { state } from '../core/state.js';
+import { get, post, del } from '../core/api.js';
+import { state, can } from '../core/state.js';
 import { esc, num, pageHeader, emptyState, toast, date } from '../core/ui.js';
 import * as sound from '../core/sound.js';
 
@@ -123,6 +123,7 @@ export async function render(root) {
 
       <div class="ach-meta"><span id="ach-count">${(data.badges || []).length} وسام</span></div>
       <div class="ach-grid" id="ach-grid"></div>
+      ${can('settings:manage') ? '<div id="ach-admin"></div>' : ''}
     `;
 
     renderList(root);
@@ -144,6 +145,8 @@ export async function render(root) {
       });
     });
 
+    if (can('settings:manage')) initAdmin(root);
+
     if ((data.awarded || []).length) {
       const names = data.badges.filter((badge) => data.awarded.includes(badge.key)).map((badge) => badge.name);
       toast(`فتحت وسامًا جديدًا: ${names.join('، ')}`, 'success');
@@ -161,3 +164,151 @@ export function resetFilters() {
 }
 
 export default { render, meta, resetFilters };
+
+/* ═════════════ إدارة أوسمة الأعضاء (للقيادة) ═════════════ */
+let adminMember = null;
+
+function initAdmin(root) {
+  const box = root.querySelector('#ach-admin');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="card ach-admin">
+      <div class="ach-admin-head">
+        <div>
+          <h3>إدارة أوسمة الأعضاء</h3>
+          <p class="muted">ابحث عن عضو، ثم اسحب منه وسامًا بعينه أو صفّر أوسمته كلها.</p>
+        </div>
+      </div>
+      <div class="ach-search">
+        <input type="text" id="ach-q" placeholder="اسم العضو أو آي دي ديسكورد" />
+        <button class="btn btn-primary btn-sm" id="ach-search-btn" type="button">بحث</button>
+      </div>
+      <div id="ach-results" class="ach-results"></div>
+      <div id="ach-manage"></div>
+    </div>
+  `;
+
+  const input = box.querySelector('#ach-q');
+  const results = box.querySelector('#ach-results');
+  const panel = box.querySelector('#ach-manage');
+  const runSearch = async () => {
+    const query = String(input.value || '').trim();
+    if (query.length < 2) return toast('اكتب حرفين على الأقل', 'warning');
+    results.innerHTML = '<p class="muted">جارٍ البحث…</p>';
+    try {
+      const data = await get(`/api/members?search=${encodeURIComponent(query)}&limit=8`);
+      const items = data.items || [];
+      results.innerHTML = items.length
+        ? items.map((m) => `<button class="ach-member" data-member="${esc(m._id || m.id)}" type="button"><span>${esc(m.displayName || m.username || 'عضو')}</span><small>${esc(m.rankName || m.rank || '')}</small></button>`).join('')
+        : '<p class="muted">لا نتائج</p>';
+      results.querySelectorAll('[data-member]').forEach((btn) => {
+        btn.addEventListener('click', () => openMember(btn.dataset.member));
+      });
+    } catch (error) {
+      results.innerHTML = `<p class="muted">${esc(error.message)}</p>`;
+    }
+  };
+  box.querySelector('#ach-search-btn').addEventListener('click', runSearch);
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); runSearch(); }
+  });
+
+  const openMember = async (id) => {
+    adminMember = id;
+    panel.innerHTML = '<p class="muted">جارٍ التحميل…</p>';
+    try {
+      const data = await get(`/api/achievements/${encodeURIComponent(id)}/manage`);
+      renderMember(panel, data);
+    } catch (error) {
+      panel.innerHTML = `<p class="muted">${esc(error.message)}</p>`;
+    }
+  };
+}
+
+function renderMember(panel, data) {
+  const member = data.member || {};
+  const items = data.items || [];
+  panel.innerHTML = `
+    <div class="ach-manage-head">
+      <div>
+        <strong>${esc(member.name)}</strong>
+        <span class="muted"> • ${num(data.ownedCount)} وسام مفتوح${data.blockedCount ? ` • ${num(data.blockedCount)} مسحوب` : ''}</span>
+      </div>
+      <div class="ach-manage-actions">
+        ${data.blockedCount ? '<button class="btn btn-ghost btn-sm" id="ach-allow" type="button">إعادة السماح بالمنح التلقائي</button>' : ''}
+        <button class="btn btn-ghost btn-sm danger" id="ach-reset" type="button">تصفير كل أوسمته</button>
+      </div>
+    </div>
+    <div class="ach-manage-grid">
+      ${items.map((item) => `
+        <div class="ach-manage-item ${item.owned ? 'is-owned' : ''} ${item.blocked ? 'is-blocked' : ''}" style="--ach:${esc(item.color)}">
+          <span class="ach-manage-ico">${esc(item.icon)}</span>
+          <div class="ach-manage-info">
+            <strong>${esc(item.name)}</strong>
+            <small>${item.owned ? 'مفتوح' : item.blocked ? 'مسحوب' : `${num(item.percent)}% تقدّم`}</small>
+          </div>
+          <button class="btn btn-xs ${item.owned ? 'btn-ghost danger' : 'btn-ghost'}" data-key="${esc(item.key)}" data-act="${item.owned ? 'revoke' : 'grant'}" type="button">
+            ${item.owned ? 'اسحب' : 'امنح'}
+          </button>
+        </div>`).join('')}
+    </div>
+  `;
+
+  const reload = () => get(`/api/achievements/${encodeURIComponent(adminMember)}/manage`).then((fresh) => renderMember(panel, fresh)).catch(() => null);
+
+  panel.querySelectorAll('[data-act]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        if (btn.dataset.act === 'revoke') {
+          await del(`/api/achievements/${encodeURIComponent(adminMember)}/${encodeURIComponent(btn.dataset.key)}`);
+          toast('سُحب الوسام', 'success');
+        } else {
+          await post(`/api/achievements/${encodeURIComponent(adminMember)}/grant`, { key: btn.dataset.key });
+          toast('مُنح الوسام', 'success');
+        }
+        sound.success();
+        await reload();
+      } catch (error) {
+        sound.error();
+        toast(error.message, 'danger');
+        btn.disabled = false;
+      }
+    });
+  });
+
+  panel.querySelector('#ach-reset')?.addEventListener('click', async (event) => {
+    const btn = event.currentTarget;
+    if (btn.dataset.confirm !== '1') {
+      btn.dataset.confirm = '1';
+      btn.textContent = 'تأكيد التصفير؟ اضغط مرة أخرى';
+      setTimeout(() => { btn.dataset.confirm = ''; btn.textContent = 'تصفير كل أوسمته'; }, 4000);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const result = await del(`/api/achievements/${encodeURIComponent(adminMember)}`);
+      toast(`صُفّرت أوسمته (${num(result.removed || 0)})`, 'success');
+      sound.success();
+      await reload();
+    } catch (error) {
+      sound.error();
+      toast(error.message, 'danger');
+      btn.disabled = false;
+    }
+  });
+
+  panel.querySelector('#ach-allow')?.addEventListener('click', async (event) => {
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    try {
+      await post(`/api/achievements/${encodeURIComponent(adminMember)}/allow`, {});
+      toast('أُعيد السماح بالمنح التلقائي', 'success');
+      await reload();
+    } catch (error) {
+      sound.error();
+      toast(error.message, 'danger');
+      btn.disabled = false;
+    }
+  });
+}

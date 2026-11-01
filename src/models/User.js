@@ -46,6 +46,8 @@ const userSchema = new mongoose.Schema(
       totalFines: { type: Number, default: 0 }
     },
     inventory: { type: [inventoryItemSchema], default: [] },
+    /* أوسمة سُحبت يدويًا: لا تُمنح تلقائيًا مرة أخرى حتى يسمح المسؤول */
+    badgeBlocklist: { type: [String], default: [] },
     bloodPact: {
       signed: { type: Boolean, default: false },
       version: { type: Number, default: 0 },

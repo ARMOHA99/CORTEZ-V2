@@ -657,3 +657,34 @@ html.cmdk-lock { overflow: hidden; }
 }
 .mc-badge span { font-size: 12px; line-height: 1; }
 .mc-badge.more { color: var(--muted); background: rgba(255,255,255,.04); border-color: var(--line); }
+
+/* لوحة إدارة أوسمة الأعضاء */
+.ach-admin { margin-top: 26px; padding: 20px; }
+.ach-admin-head { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
+.ach-admin-head h3 { font-family: var(--font-display); font-size: 18px; margin-bottom: 4px; }
+.ach-search { display: flex; gap: 8px; margin: 14px 0; }
+.ach-search input { flex: 1; }
+.ach-results { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.ach-member {
+  display: grid; gap: 2px; text-align: start; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line-strong); color: var(--text); font-family: inherit;
+}
+.ach-member:hover { border-color: var(--primary); }
+.ach-member span { font-size: 13px; font-weight: 700; }
+.ach-member small { font-size: 10px; color: var(--muted); }
+.ach-manage-head { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.ach-manage-head .muted { font-size: 12px; }
+.ach-manage-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn.btn-ghost.danger { color: #ff8f97; border-color: rgba(230, 57, 70, 0.4); }
+.ach-manage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.ach-manage-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.ach-manage-item.is-owned { border-color: color-mix(in srgb, var(--ach) 45%, transparent); background: color-mix(in srgb, var(--ach) 10%, var(--surface-2)); }
+.ach-manage-item.is-blocked { opacity: 0.72; border-style: dashed; }
+.ach-manage-ico { font-size: 18px; line-height: 1; }
+.ach-manage-info { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.ach-manage-info strong { font-size: 12.5px; }
+.ach-manage-info small { font-size: 10.5px; color: var(--muted); }
+.ach-manage-item.is-blocked small { color: var(--warning); }

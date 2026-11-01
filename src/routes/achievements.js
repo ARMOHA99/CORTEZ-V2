@@ -77,6 +77,59 @@ router.post(
   })
 );
 
+/* لوحة إدارة أوسمة عضو (للقيادة) */
+router.get(
+  '/:id/manage',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    res.json(await achievements.manage(req.params.id));
+  })
+);
+
+/* تصفير كل أوسمة عضو */
+router.delete(
+  '/:id',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    const result = await achievements.reset({ userId: req.params.id });
+    await audit.log({
+      req,
+      actor: req.user,
+      action: 'achievement.reset',
+      description: `تصفير أوسمة عضو (${result.removed} وسام)`,
+      targetType: 'user',
+      targetId: String(req.params.id),
+      meta: result
+    });
+    res.json({ ok: true, ...result });
+  })
+);
+
+/* إعادة السماح بالمنح التلقائي بعد السحب/التصفير */
+router.post(
+  '/:id/allow',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    const result = await achievements.allowAgain({ userId: req.params.id });
+    await audit.log({
+      req,
+      actor: req.user,
+      action: 'achievement.allow',
+      description: 'إعادة السماح بالمنح التلقائي للأوسمة',
+      targetType: 'user',
+      targetId: String(req.params.id),
+      meta: result
+    });
+    res.json({ ok: true, ...result });
+  })
+);
+
 router.delete(
   '/:id/:key',
   requireAuth,
