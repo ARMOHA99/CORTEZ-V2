@@ -149,6 +149,40 @@ async function buildApp() {
   /* صفحات المشاركة: /u/:id وصورة البطاقة /u/:id.png */
   if (cardRoutes) app.use('/', cardRoutes);
 
+  /* إنقاذ المتصفحات العالقة على نسخة قديمة من الـ Service Worker:
+     يمسح كل الكاش والتسجيلات ثم يعيد الزائر إلى الصفحة الرئيسية بكود جديد. */
+  app.get('/reset-app', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.type('html').send(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>تحديث CORTEZ</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0a0c;color:#f4f1f2;font-family:system-ui,sans-serif;text-align:center;padding:24px}
+h1{font-size:22px;margin-bottom:10px}p{color:#9b9296;line-height:1.7;margin:4px 0}a{color:#e63946;font-weight:700}</style></head>
+<body><div><h1>جارٍ تحديث نسختك من الموقع…</h1><p id="msg">نمسح الملفات القديمة</p>
+<p><a id="manual" href="/" style="display:none">افتح الموقع</a></p></div>
+<script>
+(async function () {
+  var msg = document.getElementById('msg');
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function (r) { return r.unregister(); }));
+    }
+  } catch (e) {}
+  try {
+    if (window.caches && caches.keys) {
+      var keys = await caches.keys();
+      await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+    }
+  } catch (e) {}
+  try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+  msg.textContent = 'تم. نفتح الموقع الآن…';
+  setTimeout(function () { window.location.replace('/?_v=' + Date.now()); }, 700);
+  setTimeout(function () { document.getElementById('manual').style.display = 'inline-block'; }, 3500);
+})();
+</script></body></html>`);
+  });
+
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) return next();
     if (req.path === '/favicon.ico' || req.path.startsWith('/uploads/')) return next();
