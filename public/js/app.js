@@ -112,13 +112,31 @@ async function loadPublicConfig() {
   }
 }
 
+/* يضع نصًا في عنصر إن وُجد النص والعنصر معًا */
+function setText(id, value) {
+  if (!value) return;
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
 function applyPublic(cfg) {
   const org = cfg.org || {};
+  const landing = cfg.landing || {};
   applyBrand(document);
   const desc = document.getElementById('hero-desc');
   if (desc && org.description) desc.textContent = org.description;
   const motto = document.getElementById('landing-motto');
   if (motto && org.motto) motto.textContent = org.motto;
+  /* نصوص صفحة الدخول القابلة للتعديل من الإعدادات */
+  setText('hero-eyebrow', landing.eyebrow);
+  setText('hero-tagline', org.tagline);
+  setText('cta-primary', landing.ctaPrimary);
+  setText('cta-store', landing.ctaStore);
+  setText('stat-members-label', landing.statMembers);
+  setText('stat-operations-label', landing.statOperations);
+  setText('stat-online-label', landing.statOnline);
+  const footnote = document.getElementById('landing-footnote');
+  if (footnote && landing.footerNote) footnote.textContent = landing.footerNote;
   const year = document.getElementById('landing-year');
   if (year) year.textContent = cfg.year || new Date().getFullYear();
   const invite = document.getElementById('discord-invite');

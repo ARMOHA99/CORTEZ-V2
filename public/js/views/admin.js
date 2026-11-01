@@ -111,6 +111,23 @@ async function tabSettings(box) {
       </div></div>
 
       <div class="card"><div class="card-body adm-form">
+        <h3>نصوص صفحة الدخول</h3>
+        <p class="adm-note">كل ما يراه الزائر قبل تسجيل الدخول. اتركه فارغًا للرجوع إلى النص الافتراضي.</p>
+        <label>السطر العلوي الصغير<input type="text" name="landingEyebrow" maxlength="80" value="${esc(s['landing.eyebrow'] || '')}" placeholder="CORTEZ CRIME SYNDICATE • LOS SANTOS" /></label>
+        <label>الجملة الكبرى (تحت الاسم)<input type="text" name="heroTagline" maxlength="120" value="${esc(s['organization.tagline'] || '')}" /></label>
+        <label>النص التعريفي<textarea name="heroDesc" rows="3" maxlength="400">${esc(s['organization.description'] || '')}</textarea></label>
+        <label>زر الدخول الأساسي<input type="text" name="ctaPrimary" maxlength="80" value="${esc(s['landing.ctaPrimary'] || '')}" /></label>
+        <label>زر المتجر<input type="text" name="ctaStore" maxlength="60" value="${esc(s['landing.ctaStore'] || '')}" /></label>
+        <div class="adm-grid">
+          <label>مسمّى الإحصائية ١<input type="text" name="statMembers" maxlength="40" value="${esc(s['landing.statMembers'] || '')}" /></label>
+          <label>مسمّى الإحصائية ٢<input type="text" name="statOperations" maxlength="40" value="${esc(s['landing.statOperations'] || '')}" /></label>
+          <label>مسمّى الإحصائية ٣<input type="text" name="statOnline" maxlength="40" value="${esc(s['landing.statOnline'] || '')}" /></label>
+        </div>
+        <label>شعار التذييل<input type="text" name="motto" maxlength="120" value="${esc(s['organization.motto'] || '')}" /></label>
+        <label>سطر الحقوق في الأسفل<input type="text" name="footerNote" maxlength="200" value="${esc(s['landing.footerNote'] || '')}" placeholder="اتركه فارغًا ليبقى النص الحالي" /></label>
+      </div></div>
+
+      <div class="card"><div class="card-body adm-form">
         <h3>الحضور والدوام</h3>
         ${sw('requireRole', 'لا يدخل الموقع إلا من يملك رولاً مربوطاً برتبة (ويُطرد عند سحب الرول)', s['access.requireDiscordRole'] !== false)}
         ${sw('attendanceEnabled', 'تسجيل الحضور مفعّل', s['attendance.enabled'] !== false)}
@@ -265,6 +282,16 @@ async function tabSettings(box) {
     const body = {
       'organization.name': f.orgName.value.trim() || 'CORTEZ',
       'organization.logoUrl': f.logoUrl.value.trim(),
+      'organization.tagline': f.heroTagline.value.trim(),
+      'organization.motto': f.motto.value.trim(),
+      'organization.description': f.heroDesc.value.trim(),
+      'landing.eyebrow': f.landingEyebrow.value.trim(),
+      'landing.ctaPrimary': f.ctaPrimary.value.trim(),
+      'landing.ctaStore': f.ctaStore.value.trim(),
+      'landing.statMembers': f.statMembers.value.trim(),
+      'landing.statOperations': f.statOperations.value.trim(),
+      'landing.statOnline': f.statOnline.value.trim(),
+      'landing.footerNote': f.footerNote.value.trim(),
       'access.requireDiscordRole': f.requireRole.checked,
       'attendance.enabled': f.attendanceEnabled.checked,
       'discord.inviteUrl': f.discordInvite.value.trim(),
@@ -285,7 +312,23 @@ async function tabSettings(box) {
     try {
       await patch('/api/admin/settings', { entries: Object.entries(body).map(([key, value]) => ({ key, value })) });
       state.config = state.config || {};
-      state.config.org = { ...(state.config.org || {}), name: body['organization.name'], logoUrl: body['organization.logoUrl'] };
+      state.config.org = {
+        ...(state.config.org || {}),
+        name: body['organization.name'],
+        logoUrl: body['organization.logoUrl'],
+        tagline: body['organization.tagline'],
+        motto: body['organization.motto'],
+        description: body['organization.description']
+      };
+      state.config.landing = {
+        eyebrow: body['landing.eyebrow'],
+        ctaPrimary: body['landing.ctaPrimary'],
+        ctaStore: body['landing.ctaStore'],
+        statMembers: body['landing.statMembers'],
+        statOperations: body['landing.statOperations'],
+        statOnline: body['landing.statOnline'],
+        footerNote: body['landing.footerNote']
+      };
       state.config.attendanceEnabled = body['attendance.enabled'];
       state.config.discord = { ...(state.config.discord || {}), inviteUrl: body['discord.inviteUrl'] };
       state.config.links = { ...(state.config.links || {}), discordInvite: body['discord.inviteUrl'] };

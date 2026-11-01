@@ -60,7 +60,19 @@ router.get(
       org: {
         ...(payload.org || {}),
         name: settings['organization.name'] || 'CORTEZ',
-        logoUrl: settings['organization.logoUrl'] || ''
+        logoUrl: settings['organization.logoUrl'] || '',
+        tagline: settings['organization.tagline'] || (payload.org && payload.org.tagline) || '',
+        motto: settings['organization.motto'] || (payload.org && payload.org.motto) || '',
+        description: settings['organization.description'] || (payload.org && payload.org.description) || ''
+      },
+      landing: {
+        eyebrow: settings['landing.eyebrow'] || '',
+        ctaPrimary: settings['landing.ctaPrimary'] || '',
+        ctaStore: settings['landing.ctaStore'] || '',
+        statMembers: settings['landing.statMembers'] || '',
+        statOperations: settings['landing.statOperations'] || '',
+        statOnline: settings['landing.statOnline'] || '',
+        footerNote: settings['landing.footerNote'] || ''
       },
       attendanceEnabled: settings['attendance.enabled'] !== false,
       release: release.version,
