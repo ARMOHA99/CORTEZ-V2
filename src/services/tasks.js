@@ -4,6 +4,7 @@ const dutyService = require('./duty');
 const goalService = require('./goal');
 const syncService = require('./sync');
 const settingsService = require('./settings');
+const attendanceService = require('./attendance');
 
 let timers = [];
 let running = false;
@@ -60,6 +61,14 @@ async function tickSyncAll() {
   }
 }
 
+async function tickAttendance() {
+  try {
+    await attendanceService.runDue();
+  } catch (error) {
+    console.error('[Tasks] attendance:', error.message);
+  }
+}
+
 function startTasks() {
   if (running) return;
   running = true;
@@ -69,6 +78,8 @@ function startTasks() {
   timers.push(setInterval(tickPresence, 60 * 1000));
   timers.push(setInterval(tickSync, 120 * 1000));
   timers.push(setInterval(tickSyncAll, 30 * 60 * 1000));
+  timers.push(setInterval(tickAttendance, 5 * 60 * 1000));
+  setTimeout(tickAttendance, 45 * 1000);
   setTimeout(tickSyncAll, 90 * 1000);
   setTimeout(tickGoal, 4000);
   setTimeout(tickVotes, 8000);

@@ -124,6 +124,11 @@ router.patch(
         updates[key] = value.map(String).slice(0, 30);
         continue;
       }
+      if (Array.isArray(value)) {
+        /* مصفوفات مثل رتب الإنذار والرتب المعفاة */
+        updates[key] = value.map((item) => String(item == null ? '' : item).slice(0, 120)).slice(0, 40);
+        continue;
+      }
       if (typeof value === 'boolean') {
         updates[key] = value;
         continue;

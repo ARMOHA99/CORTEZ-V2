@@ -347,9 +347,10 @@ async function recordSale({ listingId, qty, order, buyer }) {
 
   const amount = Math.max(1, Math.round(Number(qty) || 1));
   const gross = (Number(listing.price) || 0) * amount;
-  const percent = 0;
-  const commission = 0;
-  const net = gross;
+  const bounds = await limits();
+  const percent = bounds.commissionPercent;
+  const commission = Math.min(gross, Math.round((gross * percent) / 100));
+  const net = Math.max(0, gross - commission);
 
   const sale = await MarketSale.create({
     listing: listing._id,
@@ -379,7 +380,7 @@ async function recordSale({ listingId, qty, order, buyer }) {
     const notify = require('./notify');
     await notify.push(listing.seller, {
       title: 'بيعت سلعتك في السوق',
-      body: `«${listing.name}» × ${amount} — أرباحك ${net} ${config.system.currencyLabel}`,
+      body: `«${listing.name}» × ${amount} — صافي أرباحك ${net} ${config.system.currencyLabel} بعد عمولة ${commission}`,
       type: 'success',
       link: '/#/store-internal'
     });
@@ -390,7 +391,56 @@ async function recordSale({ listingId, qty, order, buyer }) {
   return { sale, commission, net, gross };
 }
 
+/* حصيلة الإدارة من عمولات السوق: الإجمالي، هذا الأسبوع، ومن بَاع */
+async function leadershipCut() {
+  if (!mongooseReady()) {
+    return { percent: 0, total: 0, week: 0, count: 0, recent: [], sellers: [] };
+  }
+  const MarketSale = require('../models/MarketSale');
+  const User = require('../models/User');
+  const bounds = await limits();
+  const sales = await MarketSale.find({ commission: { $gt: 0 } })
+    .sort({ at: -1 })
+    .limit(200)
+    .populate('seller', 'displayName username discordId')
+    .populate('buyer', 'displayName username')
+    .lean();
+
+  const weekStart = new Date(Date.now() - 7 * 86400000);
+  const total = sales.reduce((sum, row) => sum + (row.commission || 0), 0);
+  const week = sales.filter((row) => new Date(row.at).getTime() >= weekStart.getTime()).reduce((sum, row) => sum + (row.commission || 0), 0);
+
+  const bySeller = new Map();
+  for (const row of sales) {
+    const id = String(row.seller ? row.seller._id || row.seller : 'unknown');
+    const entry = bySeller.get(id) || { name: (row.seller && (row.seller.displayName || row.seller.username)) || 'عضو', total: 0, count: 0 };
+    entry.total += row.commission || 0;
+    entry.count += 1;
+    bySeller.set(id, entry);
+  }
+
+  return {
+    percent: bounds.commissionPercent,
+    total,
+    week,
+    count: sales.length,
+    recent: sales.slice(0, 20).map((row) => ({
+      id: String(row._id),
+      itemName: row.itemName,
+      qty: row.qty,
+      gross: row.gross,
+      commission: row.commission,
+      commissionPercent: row.commissionPercent,
+      at: row.at,
+      seller: (row.seller && (row.seller.displayName || row.seller.username)) || 'عضو',
+      buyer: (row.buyer && (row.buyer.displayName || row.buyer.username)) || 'مشتري'
+    })),
+    sellers: Array.from(bySeller.values()).sort((a, b) => b.total - a.total).slice(0, 10)
+  };
+}
+
 module.exports = {
+  leadershipCut,
   canSell,
   limits,
   weekKey,

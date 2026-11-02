@@ -6,6 +6,7 @@
 const PERMISSIONS = {
   'dashboard:view': 'عرض لوحة القيادة',
   'attendance:view': 'عرض جدول الحضور',
+  'attendance:manage': 'إدارة الحضور والإنذارات والتبريرات',
   'leaderboard:view': 'عرض لوحة الشرف',
   'members:view': 'عرض ملفات الأعضاء',
   'members:manage': 'إدارة الأعضاء (تعديل / طرد)',
@@ -69,6 +70,7 @@ const RANKS = [
       'operations:manage',
       'items:view',
       'duty:manage',
+      'attendance:manage',
       'discipline:view',
       'discipline:manage',
       'tickets:view',

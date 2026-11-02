@@ -32,5 +32,6 @@ router.use('/admin', require('./admin'));
 router.use('/upload', require('./upload'));
 router.use('/achievements', require('./achievements'));
 router.use('/market', require('./market'));
+router.use('/attendance', require('./attendance'));
 
 module.exports = router;

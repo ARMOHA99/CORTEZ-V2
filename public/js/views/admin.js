@@ -90,6 +90,15 @@ async function tabOverview(box) {
 async function tabSettings(box) {
   const { settings: s } = await get('/api/admin/settings');
   const night = s['system.nightShift'] || {};
+  let attRanks = [];
+  let dcRoles = [];
+  try { attRanks = (await get('/api/admin/ranks')).ranks || []; } catch (e) { attRanks = []; }
+  try { dcRoles = (await get('/api/admin/discord-roles')).roles || []; } catch (e) { dcRoles = []; }
+  const attRoles = Array.isArray(s['attendance.warnRoles']) ? s['attendance.warnRoles'] : ['', '', ''];
+  const attExempt = Array.isArray(s['attendance.exemptRanks']) ? s['attendance.exemptRanks'] : ['owner', 'operations', 'business'];
+  const attRoleField = (i) => (dcRoles.length
+    ? `<select id="att-role-${i}"><option value="">— بلا —</option>${dcRoles.map((r) => `<option value="${esc(r.id)}" ${String(attRoles[i] || '') === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`
+    : `<input type="text" id="att-role-${i}" value="${esc(attRoles[i] || '')}" placeholder="ID الرول" />`);
   const logo = s['organization.logoUrl'] || '';
   const name = s['organization.name'] || 'CORTEZ';
 
@@ -141,6 +150,39 @@ async function tabSettings(box) {
           <label style="flex:1">نهاية النافذة<input type="time" name="nightEnd" value="${esc(night.end || '06:00')}" /></label>
         </div>
         <label>إغلاق الدوام تلقائيًا بعد (ساعات، 0 = معطّل)<input type="number" name="autoClose" min="0" max="72" value="${Number(s['system.autoCloseDutyHours']) || 0}" /></label>
+      </div></div>
+
+      <div class="card" style="margin-top:18px"><div class="card-body adm-form">
+        <p class="eyebrow">ATTENDANCE &amp; WARNINGS</p>
+        <h3>الحضور والإنذارات</h3>
+        <p class="adm-note">يعمل عندما يكون «تسجيل الحضور مفعّل» في الأعلى. عند إغلاق اليوم يُقيَّم كل عضو: من سجّل أقل من الحد الأدنى يُحسب غائبًا، والغياب المتتالي يرفع وارنًا متصاعدًا مع رول ديسكورد ورسالة في الغرفة.</p>
+        <div class="adm-row">
+          <label style="flex:1">بداية يوم الدوام<input type="time" id="att-day-start" value="${esc(s['attendance.dayStart'] || '10:00')}" /></label>
+          <label style="flex:1">إغلاق اليوم (وقت التقييم)<input type="time" id="att-close" value="${esc(s['attendance.closeTime'] || '02:00')}" /></label>
+          <label style="flex:1">أقل مدة حضور (دقيقة)<input type="number" id="att-min" min="0" max="720" value="${Number(s['attendance.minMinutes'] ?? 30)}" /></label>
+        </div>
+        <div class="adm-row">
+          <label style="flex:1">غياب متتالٍ يفتح وارنًا<input type="number" id="att-limit" min="1" max="30" value="${Number(s['attendance.absentLimit'] ?? 3)}" /></label>
+          <label style="flex:1">مهلة التبرير (ساعة)<input type="number" id="att-justify" min="0" max="168" value="${Number(s['attendance.justifyHours'] ?? 12)}" /></label>
+          <label style="flex:1">مدة الوارن (أيام، 0 = بلا نهاية)<input type="number" id="att-warn-days" min="0" max="365" value="${Number(s['attendance.warnDays'] ?? 7)}" /></label>
+          <label style="flex:1">إعفاء العضو الجديد (أيام)<input type="number" id="att-grace" min="0" max="60" value="${Number(s['attendance.graceDays'] ?? 0)}" /></label>
+        </div>
+        <div class="adm-row">
+          <label style="flex:1">غرفة التنبيهات والإنذارات (ID)<input type="text" id="att-channel" value="${esc(s['attendance.channelId'] || '')}" placeholder="123456789012345678" /></label>
+          <label style="flex:1">غرفة سجل الحضور اليومي (ID)<input type="text" id="att-log" value="${esc(s['attendance.logChannelId'] || '')}" placeholder="123456789012345678" /></label>
+        </div>
+        <div class="adm-row">
+          <label style="flex:1">رول الإنذار الأول${attRoleField(0)}</label>
+          <label style="flex:1">رول الإنذار الثاني${attRoleField(1)}</label>
+          <label style="flex:1">رول الإنذار الثالث${attRoleField(2)}</label>
+        </div>
+        ${sw('attNotifySelf', 'إرسال رسالة خاصة للعضو عند الإنذار', s['attendance.notifySelf'] !== false)}
+        ${sw('attSummary', 'نشر تقرير الحضور اليومي في غرفة السجل', s['attendance.dailySummary'] !== false)}
+        <label>رتب معفاة من التقييم (Ctrl للاختيار المتعدد)
+          <select id="att-exempt" multiple size="6">${attRanks.map((r) => `<option value="${esc(r.key)}" ${attExempt.includes(r.key) ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
+        </label>
+        <label>نص رسالة الإنذار (اختياري — بدل النص الافتراضي)<textarea id="att-template" rows="2" maxlength="500">${esc(s['attendance.template'] || '')}</textarea></label>
+        <button class="btn btn-primary btn-sm" type="button" id="att-save">حفظ إعدادات الحضور</button>
       </div></div>
 
       <div class="card"><div class="card-body adm-form">
@@ -339,6 +381,36 @@ async function tabSettings(box) {
       toast('تم حفظ الإعدادات', 'success');
     } catch (e) { sound.error(); toast(e.message, 'danger'); }
   });
+
+  const attSave = box.querySelector('#att-save');
+  if (attSave) {
+    attSave.addEventListener('click', async () => {
+      const val = (id) => { const el = box.querySelector('#' + id); return el ? el.value : ''; };
+      try {
+        await saveSettingEntries({
+          'attendance.dayStart': val('att-day-start') || '10:00',
+          'attendance.closeTime': val('att-close') || '02:00',
+          'attendance.minMinutes': Number(val('att-min')) || 0,
+          'attendance.absentLimit': Number(val('att-limit')) || 3,
+          'attendance.justifyHours': Number(val('att-justify')) || 0,
+          'attendance.warnDays': Number(val('att-warn-days')) || 0,
+          'attendance.graceDays': Number(val('att-grace')) || 0,
+          'attendance.channelId': val('att-channel').trim(),
+          'attendance.logChannelId': val('att-log').trim(),
+          'attendance.warnRoles': [0, 1, 2].map((i) => val('att-role-' + i).trim()),
+          ...(() => {
+            const sel = box.querySelector('#att-exempt');
+            return sel && sel.options.length ? { 'attendance.exemptRanks': Array.from(sel.selectedOptions).map((o) => o.value) } : {};
+          })(),
+          'attendance.notifySelf': box.querySelector('[name="attNotifySelf"]').checked,
+          'attendance.dailySummary': box.querySelector('[name="attSummary"]').checked,
+          'attendance.template': val('att-template').trim()
+        });
+        sound.success();
+        toast('حُفظت إعدادات الحضور والإنذارات', 'success');
+      } catch (e) { sound.error(); toast(e.message, 'danger'); }
+    });
+  }
 }
 
 /* ═══════════════════════ الرتب والصلاحيات ═══════════════════════ */
@@ -647,12 +719,13 @@ async function tabStore(box) {
 
       <div class="card"><div class="card-body adm-form">
         <h3>سوق الأعضاء</h3>
-        <p class="adm-note">يسمح للأعضاء بعرض منتجاتهم داخل المتجر الداخلي. كل بيع يُسجَّل في السوق ويعود كامل مبلغه للبائع.</p>
+        <p class="adm-note">يسمح للأعضاء بعرض منتجاتهم داخل المتجر الداخلي. نسبة الإدارة تُخصم من كل بيع وتظهر في زاوية «حصيلة الإدارة» بسوق الأعضاء، ويستلم البائع الباقي.</p>
         ${canSettings ? `
           ${sw('mkOpen', 'سوق الأعضاء مفتوح', s['market.enabled'] !== false)}
           ${sw('mkApproval', 'إعلانات الأعضاء تحتاج موافقة القيادة', s['market.requireApproval'] !== false)}
           <div class="adm-grid">
             <label>عدد الإعلانات في الأسبوع<input type="number" name="mkPerWeek" min="0" max="50" value="${Number(s['market.maxPerWeek'] ?? 2)}" /></label>
+            <label>نسبة الإدارة من كل بيع %<input type="number" name="mkCommission" min="0" max="50" value="${Number(s['market.commissionPercent'] ?? 10)}" /></label>
             <label>أقصى كمية في الإعلان<input type="number" name="mkMaxQty" min="1" max="99" value="${Number(s['market.maxQty'] ?? 5)}" /></label>
             <label>مدة العرض (أيام)<input type="number" name="mkDays" min="1" max="90" value="${Number(s['market.durationDays'] ?? 14)}" /></label>
             <label>أدنى سعر<input type="number" name="mkMinPrice" min="1" value="${Number(s['market.minPrice'] ?? 1)}" /></label>
@@ -723,6 +796,7 @@ async function tabStore(box) {
           'market.enabled': box.querySelector('[name="mkOpen"]').checked,
           'market.requireApproval': box.querySelector('[name="mkApproval"]').checked,
           'market.maxPerWeek': Number(box.querySelector('[name="mkPerWeek"]').value) || 0,
+          'market.commissionPercent': Math.max(0, Math.min(50, Number(box.querySelector('[name="mkCommission"]').value) || 0)),
           'market.maxQty': Number(box.querySelector('[name="mkMaxQty"]').value) || 1,
           'market.durationDays': Number(box.querySelector('[name="mkDays"]').value) || 14,
           'market.minPrice': Number(box.querySelector('[name="mkMinPrice"]').value) || 1,

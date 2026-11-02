@@ -28,6 +28,8 @@ const userSchema = new mongoose.Schema(
     blockReason: { type: String, default: '', maxlength: 400 },
     sessionInvalid: { type: Boolean, default: false },
     joinedGuildAt: { type: Date, default: null },
+    leaveUntil: { type: Date, default: null },
+    leaveReason: { type: String, default: '', maxlength: 200 },
     lastLogin: { type: Date, default: null },
     lastSeen: { type: Date, default: null },
     duty: {

@@ -1,5 +1,5 @@
 import { get, post, patch, upload } from '../core/api.js';
-import { state } from '../core/state.js';
+import { state, can } from '../core/state.js';
 import { esc, num, money, pageHeader, emptyState, openModal, toast } from '../core/ui.js';
 import * as sound from '../core/sound.js';
 
@@ -230,8 +230,12 @@ async function loadMarket(root) {
     items: market.items || [],
     mine: mine.items || [],
     earnings: mine.earnings || { count: 0, net: 0, pendingPayout: 0, recent: [] },
-    quotaMine: mine.quota
+    quotaMine: mine.quota,
+    cut: null
   };
+  if (can('store:manage')) {
+    try { marketState.cut = await get('/api/market/commissions'); } catch (e) { marketState.cut = null; }
+  }
   renderMarket(root);
 }
 
@@ -241,11 +245,35 @@ function renderMarket(root) {
   const { items, mine, earnings, quota, limits } = marketState;
   const pending = (mine || []).filter((row) => row.status === 'pending').length;
 
+  const cutHtml = can('store:manage') && marketState.cut
+    ? `<div class="card market-cut" style="margin-bottom:14px"><div class="card-body">
+        <div class="market-head" style="padding:0;border:0;margin:0 0 8px">
+          <div><p class="eyebrow">LEADERSHIP CUT</p><h3 style="margin:2px 0">حصيلة الإدارة</h3>
+            <p class="muted" style="margin:0">${num(marketState.cut.percent)}% من كل بيع — تُجمَع لك في الجيم.</p></div>
+          <div class="market-stat"><span>الإجمالي</span><strong>${money(marketState.cut.total)}</strong></div>
+          <div class="market-stat"><span>آخر ٧ أيام</span><strong>${money(marketState.cut.week)}</strong></div>
+        </div>
+        ${(marketState.cut.recent || []).length ? `<div style="overflow-x:auto"><table class="table">
+          <thead><tr><th>المنتج</th><th>البائع</th><th>المشتري</th><th>البيع</th><th>حصتك</th><th>التاريخ</th></tr></thead>
+          <tbody>${marketState.cut.recent.map((row) => `<tr>
+            <td>${esc(row.itemName || '—')}${row.qty > 1 ? ` × ${num(row.qty)}` : ''}</td>
+            <td>${esc(row.seller)}</td>
+            <td>${esc(row.buyer)}</td>
+            <td>${money(row.gross)}</td>
+            <td><strong>${money(row.commission)}</strong></td>
+            <td>${esc(String(row.at || '').slice(0, 10))}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>` : '<p class="muted">لا مبيعات بعد.</p>'}
+        ${(marketState.cut.sellers || []).length ? `<p class="adm-note">أكثر من باع: ${marketState.cut.sellers.slice(0, 5).map((x) => `${esc(x.name)} (${money(x.total)})`).join(' · ')}</p>` : ''}
+      </div></div>`
+    : '';
+
   box.innerHTML = `
+    ${cutHtml}
     <div class="market-head">
       <div class="market-head-info">
         <h3>سوق الأعضاء</h3>
-        <p class="muted">اعرض عتادك للعائلة، ويصل كامل المبلغ إليك عند البيع.</p>
+        <p class="muted">اعرض عتادك للعائلة، وتستلم مبلغك بعد نسبة الإدارة عند البيع.</p>
       </div>
       <div class="market-head-side">
         <div class="market-quota-pill ${quota.remaining > 0 ? '' : 'is-empty'}">

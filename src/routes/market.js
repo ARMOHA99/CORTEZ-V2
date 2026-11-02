@@ -43,6 +43,17 @@ function dbReady() {
 }
 
 /* السوق + حدودي وحصتي هذا الأسبوع */
+/* حصيلة الإدارة من العمولات — يراه من يدير المتجر */
+router.get(
+  '/commissions',
+  requireAuth,
+  requirePermission('store:manage'),
+  asyncHandler(async (req, res) => {
+    if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    res.json(await market.leadershipCut());
+  })
+);
+
 router.get(
   '/',
   requireAuth,

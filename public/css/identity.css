@@ -256,3 +256,14 @@ html[data-theme='light'] .landing-preview {
   .app::after { z-index: 1350; }
   .mobile-nav { z-index: 1200; }
 }
+
+/* لوحة الحضور والإنذارات داخل صفحة الحضور */
+.att-extras { display: block; }
+.att-extras .card { margin-bottom: 16px; }
+.att-extras .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; background: rgba(34, 197, 94, 0.14); color: var(--primary); border: 1px solid rgba(34, 197, 94, 0.3); }
+.att-extras textarea, .att-extras select, .att-extras input[type="text"], .att-extras input[type="number"] { width: 100%; }
+.att-extras .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* زاوية حصيلة الإدارة في سوق الأعضاء */
+.market-cut { border: 1px solid rgba(34, 197, 94, 0.28); background: linear-gradient(180deg, rgba(34, 197, 94, 0.06), transparent); }
+.market-cut .market-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
