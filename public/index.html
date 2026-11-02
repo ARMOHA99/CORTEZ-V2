@@ -241,8 +241,8 @@
   <script>
     (function () {
       var meta = document.querySelector('meta[name="release"]');
-      var own = meta && meta.content && meta.content !== '__RELEASE__' ? String(meta.content) : '';
-      if (!own) return;
+      var own = meta && meta.content ? String(meta.content).trim() : '';
+      if (!own || own.length < 6) return;
       window.__CORTEZ_BOOT_RELEASE__ = own;
       var busy = false;
       var LAST_KEY = 'cortez.release';
