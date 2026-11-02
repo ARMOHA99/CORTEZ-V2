@@ -43,7 +43,7 @@ function pad(value) {
 }
 
 function tz() {
-  return config.system.timezone || 'Asia/Riyadh';
+  return config.system.timezone || 'Africa/Algiers';
 }
 
 function num(value, fallback, min, max) {
@@ -653,7 +653,7 @@ async function grantLeave({ userId, days, until, reason, admin }) {
   await stripRoles(user, await cfg());
   await notifyService.push(user._id, {
     title: 'تم تسجيل إجازة',
-    body: `إجازتك مسجّلة حتى ${end.toISOString().slice(0, 10)}. لن تُحسب غيابًا خلالها.`,
+    body: `إجازتك مسجّلة حتى ${time.dayKey(end, tz(), 0)}. لن تُحسب غيابًا خلالها.`,
     type: 'success',
     link: '#/attendance'
   }).catch(() => null);

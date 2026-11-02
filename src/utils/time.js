@@ -7,7 +7,7 @@
 const MS_MINUTE = 60 * 1000;
 const MS_DAY = 24 * 60 * 60 * 1000;
 
-function zonedParts(date = new Date(), timeZone = 'Asia/Riyadh') {
+function zonedParts(date = new Date(), timeZone = 'Africa/Algiers') {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
@@ -62,7 +62,7 @@ function getDayStartHour(nightShift = {}) {
   return Math.floor(parseTimeToMinutes(nightShift.end, 0) / 60);
 }
 
-function dayKey(date = new Date(), timeZone = 'Asia/Riyadh', dayStartHour = 0) {
+function dayKey(date = new Date(), timeZone = 'Africa/Algiers', dayStartHour = 0) {
   const parts = zonedParts(date, timeZone);
   const localAsUtc = new Date(
     Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)
@@ -80,7 +80,7 @@ function weekdayOfDayKey(dayKeyValue) {
   return dayKeyDate(dayKeyValue).getUTCDay();
 }
 
-function weekKeyFor(date = new Date(), timeZone = 'Asia/Riyadh', weekStartDay = 6, dayStartHour = 0) {
+function weekKeyFor(date = new Date(), timeZone = 'Africa/Algiers', weekStartDay = 6, dayStartHour = 0) {
   const currentDayKey = dayKey(date, timeZone, dayStartHour);
   const weekday = weekdayOfDayKey(currentDayKey);
   const diff = (weekday - weekStartDay + 7) % 7;
@@ -114,17 +114,17 @@ function weekDays(weekKey) {
 const ARABIC_DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const ARABIC_DAYS_SHORT = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 
-function formatTime(date, timeZone = 'Asia/Riyadh') {
+function formatTime(date, timeZone = 'Africa/Algiers') {
   const parts = zonedParts(date, timeZone);
   return `${pad(parts.hour)}:${pad(parts.minute)}`;
 }
 
-function formatDateTime(date, timeZone = 'Asia/Riyadh') {
+function formatDateTime(date, timeZone = 'Africa/Algiers') {
   const parts = zonedParts(date, timeZone);
   return `${parts.year}/${pad(parts.month)}/${pad(parts.day)} — ${pad(parts.hour)}:${pad(parts.minute)}`;
 }
 
-function formatDate(date, timeZone = 'Asia/Riyadh') {
+function formatDate(date, timeZone = 'Africa/Algiers') {
   const parts = zonedParts(date, timeZone);
   return `${parts.year}/${pad(parts.month)}/${pad(parts.day)}`;
 }
@@ -147,7 +147,7 @@ function minutesBetween(start, end) {
 }
 
 /** هل نحن داخل نافذة القفل الليلي الآن؟ */
-function inNightWindow(date = new Date(), timeZone = 'Asia/Riyadh', windowConfig = {}) {
+function inNightWindow(date = new Date(), timeZone = 'Africa/Algiers', windowConfig = {}) {
   if (!windowConfig || windowConfig.enabled === false) return false;
   const start = parseTimeToMinutes(windowConfig.start, 22 * 60);
   const end = parseTimeToMinutes(windowConfig.end, 6 * 60);
@@ -159,7 +159,7 @@ function inNightWindow(date = new Date(), timeZone = 'Asia/Riyadh', windowConfig
 }
 
 /** الوقت المتبقي حتى بداية الأسبوع القادم (بالتوقيت المحلي) */
-function nextWeekStart(weekKey, weekStartDay, timeZone = 'Asia/Riyadh') {
+function nextWeekStart(weekKey, weekStartDay, timeZone = 'Africa/Algiers') {
   const nextKey = addDaysToKey(weekKey, 7);
   const [year, month, day] = nextKey.split('-').map(Number);
   const nowParts = zonedParts(new Date(), timeZone);

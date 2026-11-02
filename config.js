@@ -120,7 +120,7 @@ const config = {
 
   /* ───────────────────────────── مزامنة الدوام ───────────────────────────── */
   system: {
-    timezone: process.env.TZ || 'Asia/Riyadh',
+    timezone: process.env.TZ || 'Africa/Algiers',
     sessionDays: Number(process.env.SESSION_DAYS || 7),
     weekStartDay: Number(process.env.WEEK_START_DAY ?? 6), // 0=الأحد ... 6=السبت
     nightShift: {

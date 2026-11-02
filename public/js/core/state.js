@@ -110,5 +110,5 @@ export function currency() {
 }
 
 export function timezone() {
-  return (state.config && state.config.system && state.config.system.timezone) || 'Asia/Riyadh';
+  return (state.config && state.config.system && state.config.system.timezone) || 'Africa/Algiers';
 }
