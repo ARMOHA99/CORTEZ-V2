@@ -7,35 +7,36 @@ import { esc, avatar, avatarUrl, timeAgo, userCell } from './ui.js';
 import { initSocket } from './socket.js';
 import * as sound from './sound.js';
 import { applyBrand } from './brand.js';
+import { icon } from './icons.js';
 
 const NAV = [
   { group: 'عام', items: [
-    { id: 'dashboard', label: 'داشبورد', icon: '◆', route: '#/dashboard', perm: 'dashboard:view' },
-    { id: 'duty', label: 'الدوام', icon: '◉', route: '#/duty' },
-    { id: 'attendance', label: 'جدول الحضور', icon: '▦', route: '#/attendance', perm: 'attendance:view' },
-    { id: 'leaderboard', label: 'لوحة الشرف', icon: '★', route: '#/leaderboard', perm: 'leaderboard:view' }
+    { id: 'dashboard', label: 'داشبورد', icon: 'dashboard', route: '#/dashboard', perm: 'dashboard:view' },
+    { id: 'duty', label: 'الدوام', icon: 'duty', route: '#/duty' },
+    { id: 'attendance', label: 'جدول الحضور', icon: 'attendance', route: '#/attendance', perm: 'attendance:view' },
+    { id: 'leaderboard', label: 'لوحة الشرف', icon: 'leaderboard', route: '#/leaderboard', perm: 'leaderboard:view' }
   ]},
   { group: 'العمليات', items: [
-    { id: 'operations', label: 'غرفة العمليات', icon: '⚔', route: '#/operations', perm: 'operations:view' },
-    { id: 'items', label: 'غرفة الأيتمات', icon: '◫', route: '#/items', perm: 'items:view' },
-    { id: 'treasury', label: 'الخزينة', icon: '$', route: '#/treasury', perm: 'treasury:view' },
-    { id: 'votes', label: 'التصويتات', icon: '⚖', route: '#/votes', perm: 'votes:view' }
+    { id: 'operations', label: 'غرفة العمليات', icon: 'operations', route: '#/operations', perm: 'operations:view' },
+    { id: 'items', label: 'غرفة الأيتمات', icon: 'items', route: '#/items', perm: 'items:view' },
+    { id: 'treasury', label: 'الخزينة', icon: 'treasury', route: '#/treasury', perm: 'treasury:view' },
+    { id: 'votes', label: 'التصويتات', icon: 'votes', route: '#/votes', perm: 'votes:view' }
   ]},
   { group: 'العائلة', items: [
-    { id: 'members', label: 'سجل الأعضاء', icon: '◈', route: '#/members', perm: 'members:view' },
-    { id: 'achievements', label: 'الأوسمة', icon: '🏅', route: '#/achievements' },
-    { id: 'discipline', label: 'سجل الانضباط', icon: '⚠', route: '#/discipline', perm: 'discipline:view' },
-    { id: 'tickets', label: 'التذاكر', icon: '✉', route: '#/tickets' },
-    { id: 'pacts', label: 'عقد الدم', icon: '✒', route: '#/pacts', perm: 'pacts:view' }
+    { id: 'members', label: 'سجل الأعضاء', icon: 'members', route: '#/members', perm: 'members:view' },
+    { id: 'achievements', label: 'الأوسمة', icon: 'achievements', route: '#/achievements' },
+    { id: 'discipline', label: 'سجل الانضباط', icon: 'discipline', route: '#/discipline', perm: 'discipline:view' },
+    { id: 'tickets', label: 'التذاكر', icon: 'tickets', route: '#/tickets' },
+    { id: 'pacts', label: 'عقد الدم', icon: 'pacts', route: '#/pacts', perm: 'pacts:view' }
   ]},
   { group: 'الخدمات', items: [
-    { id: 'store', label: 'المتجر الداخلي', icon: '■', route: '#/store-internal', perm: 'store:internal' },
-    { id: 'shop', label: 'المتجر الخارجي', icon: '▣', route: '#/shop', perm: 'store:view' },
-    { id: 'orders', label: 'الطلبات', icon: '▢', route: '#/orders' },
-    { id: 'announcements', label: 'الإعلانات', icon: '◔', route: '#/announcements' }
+    { id: 'store', label: 'المتجر الداخلي', icon: 'store', route: '#/store-internal', perm: 'store:internal' },
+    { id: 'shop', label: 'المتجر الخارجي', icon: 'shop', route: '#/shop', perm: 'store:view' },
+    { id: 'orders', label: 'الطلبات', icon: 'orders', route: '#/orders' },
+    { id: 'announcements', label: 'الإعلانات', icon: 'announcements', route: '#/announcements' }
   ]},
   { group: 'إدارة', items: [
-    { id: 'admin', label: 'لوحة الإدارة', icon: '⚙', route: '#/admin', anyPerm: ['settings:manage', 'ranks:manage', 'store:manage', 'announcements:manage', 'discipline:manage', 'pacts:manage', 'members:manage'] }
+    { id: 'admin', label: 'لوحة الإدارة', icon: 'admin', route: '#/admin', anyPerm: ['settings:manage', 'ranks:manage', 'store:manage', 'announcements:manage', 'discipline:manage', 'pacts:manage', 'members:manage'] }
   ]}
 ];
 
@@ -55,13 +56,13 @@ export function renderNav() {
     const items = group.items.filter(visibleItem);
     if (!items.length) return '';
     return `<div class="nav-group-label">${esc(group.group)}</div>` + items.map((item) => 
-      `<a href="${item.route}" class="side-link" data-nav="${item.id}" data-sound="click"><span class="nav-icon">${item.icon}</span><span>${esc(item.label)}</span></a>`
+      `<a href="${item.route}" class="side-link" data-nav="${item.id}" data-sound="click"><span class="nav-icon">${icon(item.icon, 17)}</span><span>${esc(item.label)}</span></a>`
     ).join('');
   }).join('');
   nav.innerHTML = html || '';
   if (mobile) {
     const mhtml = NAV.flatMap((g) => g.items).filter(visibleItem).slice(0, 6).map((item) =>
-      `<a href="${item.route}" class="mobile-link" data-nav="${item.id}" data-sound="click"><span>${item.icon}</span><span>${esc(item.label)}</span></a>`
+      `<a href="${item.route}" class="mobile-link" data-nav="${item.id}" data-sound="click"><span class="nav-icon">${icon(item.icon, 16)}</span><span>${esc(item.label)}</span></a>`
     ).join('');
     mobile.innerHTML = mhtml;
   }

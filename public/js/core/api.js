@@ -72,9 +72,36 @@ export const post = (path, body, options) => api(path, { ...options, method: 'PO
 export const patch = (path, body, options) => api(path, { ...options, method: 'PATCH', body });
 export const del = (path, options) => api(path, { ...options, method: 'DELETE' });
 
+/* ضغط الصورة داخل المتصفح قبل الرفع: يقلّل الحجم 70-90% ويخفّف الضغط على الخادم */
+async function compressImage(file, maxSide = 1600, quality = 0.82) {
+  if (!file || !/^image\//.test(file.type || '')) return file;
+  if (/svg|gif/i.test(file.type)) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longest = Math.max(bitmap.width, bitmap.height);
+    const scale = Math.min(1, maxSide / longest);
+    if (scale >= 1 && file.size < 350 * 1024) {
+      if (bitmap.close) bitmap.close();
+      return file;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    if (bitmap.close) bitmap.close();
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+    if (!blob || blob.size >= file.size) return file;
+    const name = String(file.name || 'image').replace(/\.[^.]+$/, '') + '.webp';
+    return new File([blob], name, { type: 'image/webp' });
+  } catch (error) {
+    return file;
+  }
+}
+
 export async function upload(file, path = '/api/upload') {
+  const prepared = await compressImage(file);
   const form = new FormData();
-  form.append('image', file);
+  form.append('image', prepared);
   return api(path, { method: 'POST', body: form });
 }
 

@@ -50,6 +50,74 @@ async function buildApp() {
   app.use(express.urlencoded({ extended: false, limit: '200kb' }));
   app.use(sanitizeInputs);
 
+  /* ══ أصول بإصدار: كل ملف JS يُقدَّم بمعامل الإصدار داخل استيراداته،
+     فيُخزَّن في المتصفح سنة كاملة (immutable) وأي نشر يغيّر الرابط بالكامل ══ */
+  const ASSET_CACHE = 'public, max-age=31536000, immutable';
+  const jsCache = new Map();
+  let cssBundle = { key: '', body: '' };
+
+  function versionImports(code, version) {
+    const withV = (spec) => (spec.includes('?v=') ? spec : `${spec}?v=${version}`);
+    code = code.replace(/(\bfrom\s*['"])(\.[^'"]+?)(['"])/g, (m, a, spec, c) => a + withV(spec) + c);
+    code = code.replace(/(\bimport\(\s*['"])(\.[^'"]+?)(['"]\s*\))/g, (m, a, spec, c) => a + withV(spec) + c);
+    return code;
+  }
+
+  function minifyCss(css) {
+    return css
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,>~+])\s*/g, '$1')
+      .replace(/;}/g, '}')
+      .trim();
+  }
+
+  app.use('/js', (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    if (!req.path.endsWith('.js')) return next();
+    const rel = decodeURIComponent(req.path).replace(/^\/+/, '');
+    if (!rel || rel.includes('..')) return next();
+    const file = path.join(PUBLIC_DIR, 'js', rel);
+    fs.stat(file, (error, stat) => {
+      if (error || !stat.isFile()) return next();
+      const key = `${file}:${stat.mtimeMs}`;
+      let body = jsCache.get(key);
+      if (!body) {
+        try {
+          body = versionImports(fs.readFileSync(file, 'utf8'), release.version);
+        } catch (readError) {
+          return next();
+        }
+        if (jsCache.size > 400) jsCache.clear();
+        jsCache.set(key, body);
+      }
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', ASSET_CACHE);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.send(body);
+    });
+  });
+
+  app.get('/css/app.css', (req, res) => {
+    const files = ['style.css', 'views.css', 'extras.css', 'identity.css'].map((name) => path.join(PUBLIC_DIR, 'css', name));
+    let key = release.version;
+    const parts = [];
+    for (const file of files) {
+      try {
+        const stat = fs.statSync(file);
+        key += `:${stat.mtimeMs}:${stat.size}`;
+        parts.push(fs.readFileSync(file, 'utf8'));
+      } catch (error) {
+        /* ملف مفقود: نتجاوزه */
+      }
+    }
+    if (!parts.length) return res.status(404).type('text/plain').send('CSS bundle unavailable');
+    if (cssBundle.key !== key) cssBundle = { key, body: minifyCss(parts.join('\n')) };
+    res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    res.setHeader('Cache-Control', ASSET_CACHE);
+    return res.send(cssBundle.body);
+  });
+
   app.use(
     express.static(PUBLIC_DIR, {
       index: false,
@@ -200,6 +268,25 @@ h1{font-size:22px;margin-bottom:10px}p{color:#9b9296;line-height:1.7;margin:4px 
   return { app, sessionMiddleware };
 }
 
+/* بناء الفهارس المركّبة بعد الإقلاع — لا يعطّل تشغيل الخادم */
+async function ensureIndexes() {
+  try {
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) return;
+    const models = ['Order', 'Transaction', 'Badge', 'MarketListing', 'Shift', 'Discipline'];
+    for (const name of models) {
+      try {
+        await require(`./src/models/${name}`).createIndexes();
+      } catch (error) {
+        /* نموذج بلا فهارس جديدة */
+      }
+    }
+    console.log('[DB] الفهارس المركّبة جاهزة');
+  } catch (error) {
+    console.error('[DB] ensureIndexes:', error.message);
+  }
+}
+
 async function main() {
   console.log('──────────────────────────────────────────────');
   console.log(`  ${config.org.name} • ${config.org.nameLatin} — منصة المافيا`);
@@ -224,6 +311,7 @@ async function main() {
 
   server = http.createServer(app);
   await realtime.init(server, sessionMiddleware, { release: release.version });
+  setTimeout(() => { ensureIndexes(); }, 5000);
 
   server.listen(PORT, () => {
     console.log(`[Server] يعمل على المنفذ ${PORT} — http://localhost:${PORT}`);

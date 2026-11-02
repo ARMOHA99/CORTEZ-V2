@@ -1,6 +1,6 @@
 /* CORTEZ — Service Worker: قشرة تعمل بلا اتصال + استقبال الإشعارات */
-const CACHE = 'cortez-shell-v2';
-const SHELL = ['/css/style.css', '/css/views.css', '/css/extras.css', '/icon.svg'];
+const CACHE = 'cortez-shell-v4';
+const SHELL = ['/css/app.css', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

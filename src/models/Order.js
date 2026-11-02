@@ -62,5 +62,9 @@ const orderSchema = new mongoose.Schema(
 );
 
 orderSchema.index({ createdAt: -1 });
+/* فهارس مركّبة للاستعلامات الحارة: طلبات عضو، طابور الانتظار، ونوع+حالة */
+orderSchema.index({ user: 1, status: 1, createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ type: 1, status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

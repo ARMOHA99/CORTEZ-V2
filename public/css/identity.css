@@ -1,0 +1,238 @@
+/* ═══════════════════════════════════════════════════════════════
+   طبقة الهوية ٢٠٢٦: سلّم أخضر، أحمر للأخطاء فقط، طباعة عربية مريحة،
+   حركة أهدأ، وضع فاتح، أيقونات موحّدة، ومكوّنات صفحة الهبوط.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --green-950: #052e16;
+  --green-900: #0b3b22;
+  --green-800: #0f5132;
+  --green-700: #15803d;
+  --green-600: #16a34a;
+  --green-500: #22c55e;
+  --green-400: #4ade80;
+  --green-300: #86efac;
+  --green-200: #bbf7d0;
+
+  /* الأحمر محجوز للأخطاء والتحذيرات فقط */
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.14);
+  --danger-glow: rgba(239, 68, 68, 0.38);
+  --line-strong: rgba(34, 197, 94, 0.2);
+}
+
+/* ── أيقونات SVG موحّدة ── */
+.nav-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; }
+.nav-icon .ico { display: block; }
+.ico { flex: 0 0 auto; vertical-align: middle; }
+.icon-btn .ico, .btn .ico { display: block; }
+.mobile-link .ico { opacity: 0.85; }
+
+/* ── طباعة عربية مريحة ── */
+body { line-height: 1.7; }
+p, .muted, .hero-desc, .card p, .adm-note, .empty p { line-height: 1.85; }
+.hero-desc, .card p, .prose, .landing-step p { max-width: 68ch; }
+h1, h2, h3, .brand strong, .hero-logo { letter-spacing: -0.01em; }
+h3 { font-weight: 800; }
+.card h3 + p { margin-top: 6px; }
+
+/* ── حركة أهدأ: انتقالات قصيرة بدل التوهجات الطويلة ── */
+.btn, .icon-btn, .side-link, .card, .chip, .ach-chip, .product-card, .landing-step {
+  transition: transform 0.18s var(--ease), background-color 0.18s var(--ease),
+    border-color 0.18s var(--ease), color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+.pulse-btn { animation-duration: 4.5s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .tilt:hover, .product-card:hover, .btn:hover { transform: none !important; }
+}
+
+/* ── الوضع الفاتح ── */
+html[data-theme='light'] {
+  --bg: #f3f7f4;
+  --bg-deep: #e7efe9;
+  --surface: #ffffff;
+  --surface-2: #f4f8f5;
+  --surface-3: #e9f1ec;
+  --text: #0c1512;
+  --muted: #4f6357;
+  --muted-2: #6d8177;
+  --line: rgba(12, 21, 18, 0.09);
+  --line-strong: rgba(12, 21, 18, 0.16);
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-hi: rgba(255, 255, 255, 0.94);
+  --primary-soft: rgba(34, 197, 94, 0.14);
+  --shadow: 0 18px 40px rgba(12, 21, 18, 0.1);
+  --shadow-red: 0 0 30px rgba(34, 197, 94, 0.16);
+  color-scheme: light;
+}
+
+html[data-theme='light'] body { background: var(--bg); color: var(--text); }
+
+html[data-theme='light'] .landing-bg {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(34, 197, 94, 0.22), transparent 55%),
+    radial-gradient(ellipse at 12% 110%, rgba(21, 128, 61, 0.16), transparent 50%),
+    linear-gradient(180deg, #f3f7f4, #e7efe9);
+}
+
+html[data-theme='light'] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(244, 248, 245, 0.99));
+}
+
+html[data-theme='light'] .topbar { background: rgba(255, 255, 255, 0.82); }
+
+html[data-theme='light'] .hero-logo { color: #0c1512; }
+html[data-theme='light'] .hero-logo::after { -webkit-text-stroke-color: rgba(21, 128, 61, 0.35); }
+html[data-theme='light'] .card,
+html[data-theme='light'] .product-card,
+html[data-theme='light'] .modal,
+html[data-theme='light'] .dropdown,
+html[data-theme='light'] .user-chip,
+html[data-theme='light'] .pact-card {
+  background: var(--surface);
+  border-color: var(--line);
+}
+html[data-theme='light'] .table th { background: var(--surface-2); color: var(--muted); }
+html[data-theme='light'] input,
+html[data-theme='light'] textarea,
+html[data-theme='light'] select {
+  background: #ffffff;
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+html[data-theme='light'] .btn-ghost { background: rgba(12, 21, 18, 0.04); color: var(--text); }
+html[data-theme='light'] .side-link:hover { background: rgba(34, 197, 94, 0.1); }
+html[data-theme='light'] .brand-sigil { box-shadow: 0 8px 20px rgba(21, 128, 61, 0.22); }
+
+/* ── صفحة الهبوط: خطوات + معاينة بطاقة ── */
+.landing-extra {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 30px;
+  align-items: stretch;
+  width: 100%;
+  max-width: 880px;
+}
+
+.landing-steps { display: grid; gap: 12px; text-align: right; }
+
+.landing-step {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  grid-template-areas: 'num title' 'num desc';
+  gap: 2px 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+}
+
+.landing-step .ls-num {
+  grid-area: num;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: #04210f;
+  background: linear-gradient(135deg, var(--green-400), var(--green-600));
+}
+
+.landing-step strong { grid-area: title; font-size: 14px; }
+.landing-step p { grid-area: desc; margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+
+.landing-preview {
+  position: relative;
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(165deg, rgba(20, 26, 22, 0.92), rgba(9, 12, 10, 0.96));
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  text-align: center;
+}
+
+html[data-theme='light'] .landing-preview {
+  background: linear-gradient(165deg, #ffffff, #eef5f0);
+}
+
+.landing-preview::before {
+  content: '';
+  position: absolute;
+  inset: -40% -10% auto;
+  height: 70%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(34, 197, 94, 0.3), transparent 70%);
+  pointer-events: none;
+}
+
+.lcp-top { display: flex; align-items: center; gap: 10px; position: relative; }
+.lcp-top strong { display: block; font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em; }
+.lcp-top small { display: block; font-size: 9px; letter-spacing: 0.16em; color: var(--muted); }
+
+.lcp-sigil {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  color: #04210f;
+  background: linear-gradient(135deg, var(--green-400), var(--green-600));
+}
+
+.lcp-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 16px auto 10px;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--green-300);
+  border: 1px solid var(--line-strong);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.lcp-name { font-family: var(--font-display); font-weight: 800; font-size: 15px; }
+.lcp-rank { font-size: 11px; color: var(--green-400); letter-spacing: 0.06em; }
+.lcp-badges { display: flex; justify-content: center; gap: 6px; margin: 10px 0 12px; font-size: 14px; }
+.lcp-badges span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid var(--line);
+}
+
+.lcp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.lcp-stats b { display: block; font-size: 14px; }
+.lcp-stats small { font-size: 10px; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .landing-extra { grid-template-columns: 1fr; }
+  .landing-preview { order: -1; }
+}

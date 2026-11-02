@@ -49,5 +49,6 @@ const shiftSchema = new mongoose.Schema(
 shiftSchema.index({ user: 1, dateKey: 1 });
 shiftSchema.index({ status: 1, startAt: -1 });
 shiftSchema.index({ weekKey: 1, user: 1 });
+shiftSchema.index({ user: 1, startAt: -1 });
 
 module.exports = mongoose.model('Shift', shiftSchema);

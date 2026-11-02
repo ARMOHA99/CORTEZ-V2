@@ -7,6 +7,13 @@
   <link rel="manifest" href="/site.webmanifest" />
   <link rel="apple-touch-icon" href="/icon.svg" />
   <meta name="description" content="منصة منظمة كورتاس — عقد الدم، الدوام، العمليات، الخزينة، والمتجر. الإمبراطورية لا تُورَّث… تُنتزَع." />
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('cortez.theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      } catch (e) {}
+    })();
+  </script>
   <meta name="release" content="__RELEASE__" />
   <meta name="csrf-token" content="__CSRF__" />
 
@@ -30,9 +37,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Cairo:wght@300;400;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%2322c55e'%3EC%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="/css/style.css?v=__RELEASE__" />
-  <link rel="stylesheet" href="/css/views.css?v=__RELEASE__" />
-  <link rel="stylesheet" href="/css/extras.css?v=__RELEASE__" />
+  <link rel="stylesheet" href="/css/app.css?v=__RELEASE__" />
 </head>
 <body>
   <div id="boot-screen" class="boot-screen">
@@ -62,6 +67,7 @@
         <span class="brand-text"><span class="org-name">CORTEZ</span></span>
       </a>
       <nav class="landing-nav">
+        <button class="icon-btn" type="button" data-theme-toggle aria-label="تبديل الوضع"></button>
         <a href="/auth/discord" data-sound="click">المتجر الخارجي</a>
         <a id="discord-invite" href="#" target="_blank" rel="noopener" data-sound="click">ديسكورد</a>
       </nav>
@@ -103,6 +109,42 @@
         <div class="landing-stat"><strong data-stat="operations">—</strong><span id="stat-operations-label">عملية مسجلة</span></div>
         <div class="landing-stat-sep"></div>
         <div class="landing-stat"><strong data-stat="online">—</strong><span id="stat-online-label">متصل الآن</span></div>
+      </div>
+
+      <div class="landing-extra">
+        <div class="landing-steps">
+          <div class="landing-step">
+            <span class="ls-num">1</span>
+            <strong>ادخل بديسكورد</strong>
+            <p>سجّل الدخول بحسابك المعتمد في سيرفر العائلة.</p>
+          </div>
+          <div class="landing-step">
+            <span class="ls-num">2</span>
+            <strong>وقّع عقد الدم</strong>
+            <p>اضغط البصمة ثلاث ثوانٍ لتفعيل عضويتك.</p>
+          </div>
+          <div class="landing-step">
+            <span class="ls-num">3</span>
+            <strong>ابدأ ورديتك</strong>
+            <p>سجّل دوامك، انضم للعمليات، وافتح أول أوسمتك.</p>
+          </div>
+        </div>
+
+        <div class="landing-preview" aria-hidden="true">
+          <div class="lcp-top">
+            <span class="lcp-sigil">C</span>
+            <div><strong>CORTEZ</strong><small>MEMBER IDENTITY CARD</small></div>
+          </div>
+          <div class="lcp-avatar">C</div>
+          <div class="lcp-name">اسمك هنا</div>
+          <div class="lcp-rank">عضو معتمد</div>
+          <div class="lcp-badges"><span>🩸</span><span>⚔</span><span>★</span><span>🏅</span></div>
+          <div class="lcp-stats">
+            <div><b>0h</b><small>دوام</small></div>
+            <div><b>0</b><small>عملية</small></div>
+            <div><b>0</b><small>وسام</small></div>
+          </div>
+        </div>
       </div>
 
       <div id="dev-login" class="dev-login hidden">
@@ -155,6 +197,7 @@
           <h2 id="page-title">داشبورد</h2>
         </div>
         <div class="topbar-actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="تبديل الوضع"></button>
           <div class="online-pill" title="الأعضاء المتصلون الآن">
             <span class="live-dot"></span><span id="online-count">0</span>
           </div>

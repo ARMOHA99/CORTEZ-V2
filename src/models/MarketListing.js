@@ -46,3 +46,7 @@ marketListingSchema.index({ status: 1, createdAt: -1 });
 marketListingSchema.index({ seller: 1, createdAt: -1 });
 
 module.exports = mongoose.model('MarketListing', marketListingSchema);
+marketListingSchema.index({ status: 1, expiresAt: 1 });
+marketListingSchema.index({ seller: 1, createdAt: -1 });
+
+module.exports = mongoose.model('MarketListing', marketListingSchema);

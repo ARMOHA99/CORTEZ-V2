@@ -26,5 +26,6 @@ const badgeSchema = new mongoose.Schema(
 
 badgeSchema.index({ user: 1, key: 1 }, { unique: true });
 badgeSchema.index({ key: 1, awardedAt: -1 });
+badgeSchema.index({ user: 1, awardedAt: -1 });
 
 module.exports = mongoose.model('Badge', badgeSchema);

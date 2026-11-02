@@ -8,6 +8,7 @@ import { initSound } from './core/sound.js';
 import { initShell, renderNav, renderUserChip, setActiveNav, paintRelease } from './core/shell.js';
 import { initSocket, watchRelease } from './core/socket.js';
 import { applyBrand } from './core/brand.js';
+import { initTheme, paintToggles } from './core/theme.js';
 import { openMemberCard } from './core/member-card.js';
 /* وحدات اختيارية: استيراد ثابت لملف غير مرفوع يمنع تحميل التطبيق كله.
    لذا تُحمَّل ديناميكيًا، ويُتجاهل أي ملف مفقود بهدوء. */
@@ -329,6 +330,7 @@ async function boot() {
 
 function initApp() {
   paintRelease();
+  paintToggles();
   renderNav();
   renderUserChip();
   initSocket();
@@ -440,5 +442,8 @@ window.addEventListener('cortez:unauthorized', () => {
   reset();
   if (wasAuthenticated) window.location.href = '/';
 });
+
+/* الوضع الفاتح/الداكن: يُربط قبل الإقلاع حتى لا يظهر الزر فارغًا */
+initTheme();
 
 boot();
