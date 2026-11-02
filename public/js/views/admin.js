@@ -153,6 +153,7 @@ async function tabSettings(box) {
         <label>رتب تتجاوز قفل الدوام (Ctrl للاختيار المتعدد — اتركها فاضية ليطبَّق القفل على الجميع بمن فيهم القيادة)
           <select id="night-bypass" multiple size="5">${attRanks.map((r) => `<option value="${esc(r.key)}" ${lockBypass.includes(r.key) ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
         </label>
+        <p class="adm-note" id="night-stored">المحفوظ الآن على السيرفر: من ${esc(night.start || '22:00')} إلى ${esc(night.end || '06:00')} — القفل ${night.lock ? 'مفعّل' : 'مطفّي'}${s.__meta && s.__meta['system.nightShift'] && s.__meta['system.nightShift'].updatedAt ? ` (آخر حفظ: ${new Date(s.__meta['system.nightShift'].updatedAt).toLocaleString('en-GB', { timeZone: 'Africa/Algiers' })})` : ' (لم يُحفظ تعديل بعد)'}</p>
         <p class="adm-note">النافذة معناه: الدوام مسموح <strong>داخلها فقط</strong>. القفل يمنع <strong>بدء واستئناف</strong> الشفت قبل بدايتها أو بعد نهايتها، ويسمح دائمًا بإنهاء الدوام. هذه النافذة تخص الدوام فقط؛ حساب يوم الحضور والتقييم في بطاقة «الحضور والإنذارات» أسفل — أو خلّها مزامنة وتتبع هذه النافذة تلقائيًا.</p>
         <label>إغلاق الدوام تلقائيًا بعد (ساعات، 0 = معطّل)<input type="number" name="autoClose" min="0" max="72" value="${Number(s['system.autoCloseDutyHours']) || 0}" /></label>
       </div></div>
@@ -399,8 +400,15 @@ async function tabSettings(box) {
       const inviteLink = document.getElementById('discord-invite');
       if (inviteLink && body['discord.inviteUrl']) inviteLink.href = body['discord.inviteUrl'];
       applyBrand(document);
+      state.config = state.config || {};
+      state.config.nightShift = body['system.nightShift'];
+      const stored = box.querySelector('#night-stored');
+      if (stored) {
+        const night = body['system.nightShift'];
+        stored.textContent = `المحفوظ الآن على السيرفر: من ${night.start} إلى ${night.end} — القفل ${night.lock ? 'مفعّل' : 'مطفّي'} (تم الحفظ الآن)`;
+      }
       sound.success();
-      toast('تم حفظ الإعدادات', 'success');
+      toast(`تم الحفظ — الدوام مسموح من ${body['system.nightShift'].start} إلى ${body['system.nightShift'].end}`, 'success');
     } catch (e) { sound.error(); toast(e.message, 'danger'); }
   });
 
@@ -435,6 +443,26 @@ async function tabSettings(box) {
   if (attSync) attSync.addEventListener('change', refreshPreview);
   [attStart, attClose].forEach((el) => el && el.addEventListener('input', refreshPreview));
 
+  /* نافذة الدوام تُحفظ مع زر الحضور كذلك حتى ما يضيع أي تعديل */
+  const nightPatch = () => {
+    const startEl = box.querySelector('[name="nightStart"]');
+    const endEl = box.querySelector('[name="nightEnd"]');
+    const enabledEl = box.querySelector('[name="nightEnabled"]');
+    const lockEl = box.querySelector('[name="nightLock"]');
+    const bypassEl = box.querySelector('#night-bypass');
+    const patch = {};
+    if (startEl && endEl) {
+      patch['system.nightShift'] = {
+        enabled: enabledEl ? enabledEl.checked : true,
+        lock: lockEl ? lockEl.checked : false,
+        start: startEl.value || '22:00',
+        end: endEl.value || '03:00'
+      };
+    }
+    if (bypassEl) patch['system.nightLockBypass'] = Array.from(bypassEl.selectedOptions).map((o) => o.value);
+    return patch;
+  };
+
   const attSave = box.querySelector('#att-save');
   if (attSave) {
     attSave.addEventListener('click', async () => {
@@ -460,10 +488,20 @@ async function tabSettings(box) {
           })(),
           'attendance.notifySelf': box.querySelector('[name="attNotifySelf"]').checked,
           'attendance.dailySummary': box.querySelector('[name="attSummary"]').checked,
-          'attendance.template': val('att-template').trim()
+          'attendance.template': val('att-template').trim(),
+          ...nightPatch()
         });
+        const stored = box.querySelector('#night-stored');
+        const night = nightPatch()['system.nightShift'];
+        if (stored && night) {
+          stored.textContent = `المحفوظ الآن على السيرفر: من ${night.start} إلى ${night.end} — القفل ${night.lock ? 'مفعّل' : 'مطفّي'} (تم الحفظ الآن)`;
+        }
+        if (night) {
+          state.config = state.config || {};
+          state.config.nightShift = night;
+        }
         sound.success();
-        toast('حُفظت إعدادات الحضور والإنذارات', 'success');
+        toast(`حُفظ — الدوام مسموح من ${night ? night.start : ''} إلى ${night ? night.end : ''}`, 'success');
       } catch (e) { sound.error(); toast(e.message, 'danger'); }
     });
   }

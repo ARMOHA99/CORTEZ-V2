@@ -88,7 +88,11 @@ function defaultSettings() {
 
 function merge(defaults, rows) {
   const result = { ...defaults };
-  for (const row of rows) {
+  /* الأحدث يفوز: يمنع قيمة قديمة من التغلّب على آخر حفظ */
+  const ordered = [...rows].sort(
+    (a, b) => new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime()
+  );
+  for (const row of ordered) {
     result[row.key] = row.value;
     result.__meta = result.__meta || {};
     result.__meta[row.key] = {
