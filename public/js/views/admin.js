@@ -146,42 +146,56 @@ async function tabSettings(box) {
         ${sw('nightEnabled', 'تفعيل نافذة الدوام الليلي', night.enabled !== false)}
         ${sw('nightLock', 'قفل الدوام خارج النافذة', Boolean(night.lock))}
         <div class="adm-row">
-          <label style="flex:1">بداية النافذة<input type="time" name="nightStart" value="${esc(night.start || '22:00')}" /></label>
-          <label style="flex:1">نهاية النافذة<input type="time" name="nightEnd" value="${esc(night.end || '06:00')}" /></label>
+          <label style="flex:1">نافذة الدوام: من<input type="time" name="nightStart" value="${esc(night.start || '22:00')}" /></label>
+          <label style="flex:1">إلى<input type="time" name="nightEnd" value="${esc(night.end || '06:00')}" /></label>
         </div>
+        <p class="adm-note">هذه النافذة تخص تسجيل الدوام فقط (منع بدء أو إغلاق الشفت خارجها). حساب يوم الحضور والتقييم في بطاقة «الحضور والإنذارات» أسفل — أو خلّها مزامنة وتتبع هذه النافذة تلقائيًا.</p>
         <label>إغلاق الدوام تلقائيًا بعد (ساعات، 0 = معطّل)<input type="number" name="autoClose" min="0" max="72" value="${Number(s['system.autoCloseDutyHours']) || 0}" /></label>
       </div></div>
 
       <div class="card" style="margin-top:18px"><div class="card-body adm-form">
         <p class="eyebrow">ATTENDANCE &amp; WARNINGS</p>
         <h3>الحضور والإنذارات</h3>
-        <p class="adm-note">يعمل عندما يكون «تسجيل الحضور مفعّل» في الأعلى. عند إغلاق اليوم يُقيَّم كل عضو: من سجّل أقل من الحد الأدنى يُحسب غائبًا، والغياب المتتالي يرفع وارنًا متصاعدًا مع رول ديسكورد ورسالة في الغرفة.</p>
+        <p class="adm-note">يعمل عندما يكون «تسجيل الحضور مفعّل» في بطاقة «الحضور والدوام». عند وصول وقت الإغلاق يُقيَّم كل عضو: من سجّل أقل من الحد الأدنى يُحسب غائبًا، والغياب المتتالي يفتح وارنًا متصاعدًا.</p>
+
+        <h4 class="adm-sec">١) يوم الحضور — من متى إلى متى يُحسب اليوم</h4>
+        ${sw('attSyncNight', 'خلّي يوم الحضور يتبع نافذة الدوام الليلي تلقائيًا (بدايتها ونهايتها)', s['attendance.syncNightWindow'] === true)}
         <div class="adm-row">
-          <label style="flex:1">بداية يوم الدوام<input type="time" id="att-day-start" value="${esc(s['attendance.dayStart'] || '10:00')}" /></label>
-          <label style="flex:1">إغلاق اليوم (وقت التقييم)<input type="time" id="att-close" value="${esc(s['attendance.closeTime'] || '02:00')}" /></label>
-          <label style="flex:1">أقل مدة حضور (دقيقة)<input type="number" id="att-min" min="0" max="720" value="${Number(s['attendance.minMinutes'] ?? 30)}" /></label>
+          <label style="flex:1">بداية يوم الحضور<input type="time" id="att-day-start" value="${esc(s['attendance.dayStart'] || '10:00')}" /></label>
+          <label style="flex:1">إغلاق اليوم = وقت التقييم<input type="time" id="att-close" value="${esc(s['attendance.closeTime'] || '02:00')}" /></label>
         </div>
+        <p class="adm-note" id="att-window-preview">يوم الحضور: من 10:00 إلى 02:00 من اليوم التالي — كل دقيقة دوام تُسجَّل داخله تُحسب لهذا اليوم. عند الإغلاق يتم التقييم وإصدار الإنذارات.</p>
+
+        <h4 class="adm-sec">٢) شرط الحضور والتبرير</h4>
         <div class="adm-row">
+          <label style="flex:1">أقل مدة حضور تُعدّ حضورًا (دقيقة)<input type="number" id="att-min" min="0" max="720" value="${Number(s['attendance.minMinutes'] ?? 30)}" /></label>
           <label style="flex:1">غياب متتالٍ يفتح وارنًا<input type="number" id="att-limit" min="1" max="30" value="${Number(s['attendance.absentLimit'] ?? 3)}" /></label>
-          <label style="flex:1">مهلة التبرير (ساعة)<input type="number" id="att-justify" min="0" max="168" value="${Number(s['attendance.justifyHours'] ?? 12)}" /></label>
-          <label style="flex:1">مدة الوارن (أيام، 0 = بلا نهاية)<input type="number" id="att-warn-days" min="0" max="365" value="${Number(s['attendance.warnDays'] ?? 7)}" /></label>
-          <label style="flex:1">إعفاء العضو الجديد (أيام)<input type="number" id="att-grace" min="0" max="60" value="${Number(s['attendance.graceDays'] ?? 0)}" /></label>
+          <label style="flex:1">مهلة التبرير بعد الغياب (ساعة)<input type="number" id="att-justify" min="0" max="168" value="${Number(s['attendance.justifyHours'] ?? 12)}" /></label>
+        </div>
+
+        <h4 class="adm-sec">٣) الإنذارات</h4>
+        <div class="adm-row">
+          <label style="flex:1">مدة بقاء الوارن (أيام، 0 = بلا نهاية)<input type="number" id="att-warn-days" min="0" max="365" value="${Number(s['attendance.warnDays'] ?? 7)}" /></label>
+          <label style="flex:1">إعفاء العضو الجديد من التقييم (أيام)<input type="number" id="att-grace" min="0" max="60" value="${Number(s['attendance.graceDays'] ?? 0)}" /></label>
         </div>
         <div class="adm-row">
-          <label style="flex:1">غرفة التنبيهات والإنذارات (ID)<input type="text" id="att-channel" value="${esc(s['attendance.channelId'] || '')}" placeholder="123456789012345678" /></label>
-          <label style="flex:1">غرفة سجل الحضور اليومي (ID)<input type="text" id="att-log" value="${esc(s['attendance.logChannelId'] || '')}" placeholder="123456789012345678" /></label>
-        </div>
-        <div class="adm-row">
-          <label style="flex:1">رول الإنذار الأول${attRoleField(0)}</label>
-          <label style="flex:1">رول الإنذار الثاني${attRoleField(1)}</label>
-          <label style="flex:1">رول الإنذار الثالث${attRoleField(2)}</label>
+          <label style="flex:1">رول الوارن الأول${attRoleField(0)}</label>
+          <label style="flex:1">رول الوارن الثاني${attRoleField(1)}</label>
+          <label style="flex:1">رول الوارن الثالث${attRoleField(2)}</label>
         </div>
         ${sw('attNotifySelf', 'إرسال رسالة خاصة للعضو عند الإنذار', s['attendance.notifySelf'] !== false)}
-        ${sw('attSummary', 'نشر تقرير الحضور اليومي في غرفة السجل', s['attendance.dailySummary'] !== false)}
         <label>رتب معفاة من التقييم (Ctrl للاختيار المتعدد)
           <select id="att-exempt" multiple size="6">${attRanks.map((r) => `<option value="${esc(r.key)}" ${attExempt.includes(r.key) ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
         </label>
         <label>نص رسالة الإنذار (اختياري — بدل النص الافتراضي)<textarea id="att-template" rows="2" maxlength="500">${esc(s['attendance.template'] || '')}</textarea></label>
+
+        <h4 class="adm-sec">٤) غرف ديسكورد — كل غرفة لحالها</h4>
+        <div class="adm-row">
+          <label style="flex:1">غرفة التنبيهات (تبرير جديد، أشياء تحتاج مراجعة)<input type="text" id="att-notify-channel" value="${esc(s['attendance.notifyChannelId'] || s['attendance.channelId'] || '')}" placeholder="1531406984748994651" /></label>
+          <label style="flex:1">غرفة الإنذارات (رسائل الوارن الرسمية)<input type="text" id="att-warn-channel" value="${esc(s['attendance.warnChannelId'] || '')}" placeholder="1566619337241006192" /></label>
+          <label style="flex:1">غرفة سجل الحضور اليومي (تقرير الإغلاق)<input type="text" id="att-log" value="${esc(s['attendance.logChannelId'] || '')}" placeholder="اذا تركتها فاضية ما ينشر تقرير" /></label>
+        </div>
+        ${sw('attSummary', 'نشر تقرير الحضور اليومي في غرفة السجل', s['attendance.dailySummary'] !== false)}
         <button class="btn btn-primary btn-sm" type="button" id="att-save">حفظ إعدادات الحضور</button>
       </div></div>
 
@@ -382,6 +396,37 @@ async function tabSettings(box) {
     } catch (e) { sound.error(); toast(e.message, 'danger'); }
   });
 
+  const attSync = box.querySelector('[name="attSyncNight"]');
+  const attStart = box.querySelector('#att-day-start');
+  const attClose = box.querySelector('#att-close');
+  const attPreview = box.querySelector('#att-window-preview');
+  const nightStart = night.start || '22:00';
+  const nightEnd = night.end || '06:00';
+  const refreshPreview = () => {
+    if (!attPreview || !attStart || !attClose) return;
+    const sync = Boolean(attSync && attSync.checked);
+    if (sync) {
+      attStart.value = nightStart;
+      attClose.value = nightEnd;
+    }
+    attStart.disabled = sync;
+    attClose.disabled = sync;
+    const toMin = (v) => {
+      const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
+      return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
+    };
+    const a = toMin(attStart.value);
+    let b = toMin(attClose.value);
+    if (b <= a) b += 1440;
+    const hours = Math.round(((b - a) / 60) * 10) / 10;
+    attPreview.textContent = sync
+      ? `مزامَن مع نافذة الدوام الليلي: من ${attStart.value} إلى ${attClose.value} من اليوم التالي (${hours} ساعة). أي تعديل على النافذة في بطاقة «الحضور والدوام» ينتقل تلقائيًا هنا.`
+      : `يوم الحضور: من ${attStart.value} إلى ${attClose.value} من اليوم التالي (${hours} ساعة) — يُقيَّم مباشرة عند ${attClose.value}.`;
+  };
+  refreshPreview();
+  if (attSync) attSync.addEventListener('change', refreshPreview);
+  [attStart, attClose].forEach((el) => el && el.addEventListener('input', refreshPreview));
+
   const attSave = box.querySelector('#att-save');
   if (attSave) {
     attSave.addEventListener('click', async () => {
@@ -395,8 +440,11 @@ async function tabSettings(box) {
           'attendance.justifyHours': Number(val('att-justify')) || 0,
           'attendance.warnDays': Number(val('att-warn-days')) || 0,
           'attendance.graceDays': Number(val('att-grace')) || 0,
-          'attendance.channelId': val('att-channel').trim(),
+          'attendance.syncNightWindow': Boolean(box.querySelector('[name="attSyncNight"]').checked),
+          'attendance.notifyChannelId': val('att-notify-channel').trim(),
+          'attendance.warnChannelId': val('att-warn-channel').trim(),
           'attendance.logChannelId': val('att-log').trim(),
+          'attendance.channelId': val('att-notify-channel').trim(),
           'attendance.warnRoles': [0, 1, 2].map((i) => val('att-role-' + i).trim()),
           ...(() => {
             const sel = box.querySelector('#att-exempt');

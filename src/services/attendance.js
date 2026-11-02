@@ -21,8 +21,10 @@ const DEFAULTS = {
   warnDays: 7,
   dayStart: '10:00',
   closeTime: '02:00',
-  channelId: '',
+  notifyChannelId: '',
+  warnChannelId: '',
   logChannelId: '',
+  syncNight: false,
   warnRoles: ['', '', ''],
   exemptRanks: ['owner', 'operations', 'business'],
   graceDays: 0,
@@ -63,7 +65,9 @@ async function cfg() {
   }
   const roles = Array.isArray(s['attendance.warnRoles']) ? s['attendance.warnRoles'] : DEFAULTS.warnRoles;
   const exempt = Array.isArray(s['attendance.exemptRanks']) ? s['attendance.exemptRanks'] : DEFAULTS.exemptRanks;
-  return {
+  const night = s['system.nightShift'] || {};
+  const syncNight = s['attendance.syncNightWindow'] === true && night.enabled !== false;
+  const out = {
     enabled: s['attendance.enabled'] !== false,
     minMinutes: num(s['attendance.minMinutes'], DEFAULTS.minMinutes, 0, 720),
     absentLimit: num(s['attendance.absentLimit'], DEFAULTS.absentLimit, 1, 30),
@@ -71,8 +75,10 @@ async function cfg() {
     warnDays: num(s['attendance.warnDays'], DEFAULTS.warnDays, 0, 365),
     dayStart: brave(s['attendance.dayStart'], DEFAULTS.dayStart),
     closeTime: brave(s['attendance.closeTime'], DEFAULTS.closeTime),
-    channelId: brave(s['attendance.channelId'], ''),
+    notifyChannelId: brave(s['attendance.notifyChannelId'], brave(s['attendance.channelId'], '')),
+    warnChannelId: brave(s['attendance.warnChannelId'], ''),
     logChannelId: brave(s['attendance.logChannelId'], ''),
+    syncNight: s['attendance.syncNightWindow'] === true,
     warnRoles: roles.slice(0, 5).map((role) => String(role || '').trim()),
     exemptRanks: exempt.map((rank) => String(rank || '').trim()).filter(Boolean),
     graceDays: num(s['attendance.graceDays'], DEFAULTS.graceDays, 0, 60),
@@ -80,6 +86,13 @@ async function cfg() {
     dailySummary: s['attendance.dailySummary'] !== false,
     template: typeof s['attendance.template'] === 'string' ? s['attendance.template'] : ''
   };
+
+  /* عند اختيار المزامنة: يوم الحضور يتبع حدود نافذة الدوام الليلي نفسها */
+  if (syncNight) {
+    out.dayStart = night.start || out.dayStart;
+    out.closeTime = night.end || out.closeTime;
+  }
+  return out;
 }
 
 /* ─────────── حساب اليوم والنافذة بالتوقيت المحلي ─────────── */
@@ -246,7 +259,7 @@ async function issueWarning({ user, dateKey, streak, attendanceId, c, reason }) 
     attendance: attendanceId || null,
     issuedByName: 'النظام',
     roleId,
-    channelId: c.channelId
+    channelId: c.warnChannelId || c.notifyChannelId
   });
 
   if (attendanceId) {
@@ -267,7 +280,7 @@ async function issueWarning({ user, dateKey, streak, attendanceId, c, reason }) 
       { name: 'ينتهي في', value: c.warnDays > 0 ? `${c.warnDays} يوم` : 'بلا نهاية', inline: true }
     ]
   );
-  await sendChannel(c.channelId, { content: mention, embeds: [embed] });
+  await sendChannel(c.warnChannelId || c.notifyChannelId, { content: mention, embeds: [embed] });
 
   try {
     await notifyService.push(user._id, {
@@ -507,7 +520,7 @@ async function submitJustification(user, { dateKey, text }) {
     { name: 'الرتبة', value: user.rank || '—', inline: true },
     { name: 'اليوم', value: key, inline: true }
   ]);
-  await sendChannel(c.channelId || c.logChannelId, { embeds: [embed] });
+  await sendChannel(c.notifyChannelId || c.warnChannelId || c.logChannelId, { embeds: [embed] });
 
   return { ok: true, day: day.toJSON() };
 }
