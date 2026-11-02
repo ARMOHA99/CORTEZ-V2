@@ -3,7 +3,6 @@
    عدد الإعلانات في الأسبوع، نسبة العمولة، حدود السعر، مدة العرض، والموافقة. */
 
 const settingsService = require('./settings');
-const treasuryService = require('./treasury');
 const images = require('../utils/images');
 const config = require('../../config');
 
@@ -338,7 +337,7 @@ async function myEarnings(userId) {
   };
 }
 
-/* يُستدعى من إنهاء الطلب: يسجّل البيع، يحسب العمولة للخزينة، ويخبر البائع */
+/* يُستدعى من إنهاء الطلب: يسجّل البيع ويخبر البائع */
 async function recordSale({ listingId, qty, order, buyer }) {
   if (!mongooseReady()) return null;
   const MarketListing = require('../models/MarketListing');
@@ -348,10 +347,9 @@ async function recordSale({ listingId, qty, order, buyer }) {
 
   const amount = Math.max(1, Math.round(Number(qty) || 1));
   const gross = (Number(listing.price) || 0) * amount;
-  const bounds = await limits();
-  const percent = bounds.commissionPercent;
-  const commission = Math.min(gross, Math.round((gross * percent) / 100));
-  const net = Math.max(0, gross - commission);
+  const percent = 0;
+  const commission = 0;
+  const net = gross;
 
   const sale = await MarketSale.create({
     listing: listing._id,
@@ -377,27 +375,11 @@ async function recordSale({ listingId, qty, order, buyer }) {
   }
   await listing.save();
 
-  if (commission > 0) {
-    try {
-      await treasuryService.record({
-        type: 'income',
-        amount: commission,
-        category: 'سوق الأعضاء',
-        description: `عمولة بيع «${listing.name}» — ${percent}% من ${gross} (الطلب ${order ? order.code : '—'})`,
-        refType: 'purchase',
-        refId: listing._id,
-        user: buyer || null
-      });
-    } catch (error) {
-      console.error('[Market] تعذّر تسجيل العمولة:', error.message);
-    }
-  }
-
   try {
     const notify = require('./notify');
     await notify.push(listing.seller, {
       title: 'بيعت سلعتك في السوق',
-      body: `«${listing.name}» × ${amount} — صافي أرباحك ${net} ${config.system.currencyLabel} بعد عمولة ${commission}`,
+      body: `«${listing.name}» × ${amount} — أرباحك ${net} ${config.system.currencyLabel}`,
       type: 'success',
       link: '/#/store-internal'
     });

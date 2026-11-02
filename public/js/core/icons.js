@@ -10,7 +10,6 @@ const PATHS = {
   leaderboard: '<path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H4.5a2.5 2.5 0 0 0 2.5 4M17 5h2.5a2.5 2.5 0 0 1-2.5 4"/>',
   operations: '<path d="M14.5 3.5 20.5 9.5 9.5 20.5 3.5 14.5z"/><path d="M3.5 3.5l5 5M20.5 14.5l-5-5"/>',
   items: '<path d="M12 3 3.5 7v10L12 21l8.5-4V7z"/><path d="M3.5 7 12 11l8.5-4M12 11v10"/>',
-  treasury: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2"/>',
   votes: '<path d="M12 3v18M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0zM19 8l-3 7a3 3 0 0 0 6 0z"/>',
   members: '<circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c0-3.2 2.8-5.4 6.2-5.4s6.2 2.2 6.2 5.4"/><path d="M16.5 5.4a3.2 3.2 0 0 1 0 6.2M18 14.9c2 .6 3.4 2.2 3.4 4.4"/>',
   achievements: '<circle cx="12" cy="9" r="5.5"/><path d="M8.6 13.6 7 21l5-2.6L17 21l-1.6-7.4"/>',

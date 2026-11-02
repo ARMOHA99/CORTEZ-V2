@@ -15,8 +15,6 @@ const PERMISSIONS = {
   'duty:night': 'تجاوز القفل الليلي للدوام',
   'operations:view': 'عرض غرفة العمليات',
   'operations:manage': 'تسجيل وإدارة العمليات',
-  'treasury:view': 'عرض الخزينة',
-  'treasury:manage': 'إدارة الخزينة (إيداع / سحب)',
   'items:view': 'عرض غرفة الأيتمات والأسعار',
   'items:manage': 'إدارة أسعار الأيتمات (بزنس مانجر)',
   'store:view': 'عرض المتجر الخارجي',
@@ -78,7 +76,6 @@ const RANKS = [
       'votes:view',
       'votes:create',
       'pacts:view',
-      'treasury:view',
       'store:view'
     ]
   },
@@ -96,8 +93,6 @@ const RANKS = [
       'attendance:view',
       'leaderboard:view',
       'members:view',
-      'treasury:view',
-      'treasury:manage',
       'items:view',
       'items:manage',
       'store:view',

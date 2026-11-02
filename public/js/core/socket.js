@@ -203,7 +203,6 @@ export function initSocket() {
   socket.on('duty:update', (payload) => emit('duty:live', payload));
   socket.on('duty:penalty', (payload) => { sound.notify(); emit('duty:penalty', payload); });
   socket.on('operations:update', (payload) => emit('refresh:operations', payload));
-  socket.on('treasury:update', (payload) => emit('refresh:treasury', payload));
   socket.on('orders:update', (payload) => { if (state.authenticated) sound.notify(); emit('refresh:orders', payload); });
   socket.on('order:update', (payload) => { sound.notify(); toast('تم تحديث حالة طلبك', 'success'); emit('order:user', payload); });
   socket.on('store:update', (payload) => emit('refresh:store', payload));

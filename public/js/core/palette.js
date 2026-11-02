@@ -12,7 +12,6 @@ const ROUTES = [
   { hash: '#/duty', label: 'دوامي', hint: 'بدء أو إنهاء الدوام', glyph: '◷' },
   { hash: '#/attendance', label: 'كشف الحضور', hint: 'ساعات الأسبوع', glyph: '▤', perm: 'attendance:view' },
   { hash: '#/operations', label: 'العمليات', hint: 'سجل العمليات والانتصارات', glyph: '⚔', perm: 'operations:view' },
-  { hash: '#/treasury', label: 'الخزينة', hint: 'الدخل والمصروف', glyph: '◈', perm: 'treasury:view' },
   { hash: '#/items', label: 'المخزون', hint: 'المواد والأسلحة', glyph: '❖', perm: 'items:view' },
   { hash: '#/shop', label: 'المتجر', hint: 'المنتجات والطلبات', glyph: '⌂', perm: 'store:view' },
   { hash: '#/orders', label: 'الطلبات', hint: 'متابعة طلبات المتجر', glyph: '☰', perm: 'orders:view' },

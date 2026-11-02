@@ -17,7 +17,6 @@ function optional(path, handler) {
 optional('/streak', './streak');
 optional('/push', './push');
 router.use('/operations', require('./operations'));
-router.use('/treasury', require('./treasury'));
 router.use('/products', require('./products'));
 router.use('/items', require('./items'));
 router.use('/shop', require('./shop'));

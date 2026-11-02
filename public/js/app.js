@@ -373,7 +373,6 @@ async function loadRoute(hash) {
     '#/duty': () => import('./views/duty.js'),
     '#/attendance': () => import('./views/attendance.js'),
     '#/operations': () => import('./views/operations.js'),
-    '#/treasury': () => import('./views/treasury.js'),
     '#/items': () => import('./views/items.js'),
     '#/store-internal': () => import('./views/store.js'),
     '#/orders': () => import('./views/orders.js'),

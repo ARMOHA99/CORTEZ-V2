@@ -164,7 +164,6 @@ const FEED_LABELS = {
   'duty.penalty': { label: 'خصم ساعات دوام', tone: 'warning' },
   'operation.create': { label: 'سُجّلت عملية', tone: 'primary' },
   'member.rank': { label: 'ترقية/تعديل رتبة', tone: 'primary' },
-  'treasury.transaction': { label: 'حركة في الخزينة', tone: 'muted' },
   'order.create': { label: 'طلب جديد في المتجر', tone: 'info' },
   'order.status': { label: 'تحديث حالة طلب', tone: 'info' },
   'announcement.create': { label: 'إعلان جديد', tone: 'warning' },

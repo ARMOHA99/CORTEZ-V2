@@ -20,7 +20,6 @@ const NAV = [
   { group: 'العمليات', items: [
     { id: 'operations', label: 'غرفة العمليات', icon: 'operations', route: '#/operations', perm: 'operations:view' },
     { id: 'items', label: 'غرفة الأيتمات', icon: 'items', route: '#/items', perm: 'items:view' },
-    { id: 'treasury', label: 'الخزينة', icon: 'treasury', route: '#/treasury', perm: 'treasury:view' },
     { id: 'votes', label: 'التصويتات', icon: 'votes', route: '#/votes', perm: 'votes:view' }
   ]},
   { group: 'العائلة', items: [

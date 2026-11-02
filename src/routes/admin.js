@@ -45,15 +45,13 @@ router.get(
       const Operation = require('../models/Operation');
       const Order = require('../models/Order');
       const Ticket = require('../models/Ticket');
-      const Transaction = require('../models/Transaction');
-      const [members, operations, orders, tickets, transactions] = await Promise.all([
+      const [members, operations, orders, tickets] = await Promise.all([
         User.countDocuments({}),
         Operation.countDocuments({}),
         Order.countDocuments({ status: 'pending' }),
-        Ticket.countDocuments({ status: 'pending' }),
-        Transaction.countDocuments({})
+        Ticket.countDocuments({ status: 'pending' })
       ]);
-      stats.counts = { members, operations, orders, tickets, transactions };
+      stats.counts = { members, operations, orders, tickets };
     }
     res.json({ stats });
   })

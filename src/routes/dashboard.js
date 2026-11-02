@@ -5,7 +5,6 @@ const { requireAuth } = require('../middleware/auth');
 const goalService = require('../services/goal');
 const dutyService = require('../services/duty');
 const operationsService = require('../services/operations');
-const treasuryService = require('../services/treasury');
 const pactService = require('../services/pact');
 const leaderboardService = require('../services/leaderboard');
 const time = require('../utils/time');
@@ -56,7 +55,6 @@ router.get(
         dutyNow: [],
         myDuty: mySummary,
         nightShift: nightState,
-        treasury: null,
         counts: { pendingOrders: 0, openVotes: 0, unsignedPacts: 0, openTickets: 0 },
         top: [],
         week: { weekKey: context.weekKey, weekDays: time.weekDays(context.weekKey), timezone: context.timezone },
@@ -73,12 +71,11 @@ router.get(
     const Ticket = require('../models/Ticket');
 
     const showOperations = can(permissions, 'operations:view');
-    const showTreasury = can(permissions, 'treasury:view');
     const showPacts = can(permissions, 'pacts:view');
     const showVotes = can(permissions, 'votes:view');
     const showLeaderboard = can(permissions, 'leaderboard:view');
 
-    const [members, activeShifts, weeklyRow, weeklyPenalty, announcements, recentOperations, pendingOrders, openVotes, unsignedPacts, openTickets, opsStats, treasury, top] =
+    const [members, activeShifts, weeklyRow, weeklyPenalty, announcements, recentOperations, pendingOrders, openVotes, unsignedPacts, openTickets, opsStats, top] =
       await Promise.all([
         User.countDocuments({ inGuild: true, blocked: false }),
         Shift.find({ status: { $in: ['active', 'paused'] } })
@@ -104,7 +101,6 @@ router.get(
         showPacts ? pactService.unresolvedCount() : Promise.resolve(0),
         Ticket.countDocuments({ status: 'pending' }),
         showOperations ? operationsService.operationStats() : Promise.resolve({ total: 0, wins: 0, losses: 0, winRate: 0, netValue: 0 }),
-        showTreasury ? treasuryService.totals() : Promise.resolve(null),
         showLeaderboard
           ? leaderboardService.build({ limit: 5 })
           : Promise.resolve({ items: [] })
@@ -148,7 +144,6 @@ router.get(
       dutyNow,
       myDuty: mySummary,
       nightShift: nightState,
-      treasury,
       counts: {
         pendingOrders,
         openVotes,

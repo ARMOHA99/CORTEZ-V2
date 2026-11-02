@@ -188,7 +188,6 @@ async function deleteOperation(operationId, user) {
   if (!mongooseReady()) throw httpError(503, 'قاعدة البيانات غير متصلة حالياً', 'DB_OFFLINE');
   const Operation = require('../models/Operation');
   const User = require('../models/User');
-  const Transaction = require('../models/Transaction');
   const operation = await Operation.findById(operationId);
   if (!operation) throw httpError(404, 'العملية غير موجودة', 'NOT_FOUND');
 
@@ -210,7 +209,6 @@ async function deleteOperation(operationId, user) {
       }
     );
   }
-  await Transaction.deleteMany({ refType: 'operation', refId: operation._id });
   await Operation.deleteOne({ _id: operation._id });
   realtime.emit('operations:update', { deleted: String(operation._id) });
   realtime.emit('dashboard:refresh', { reason: 'operation-deleted' });

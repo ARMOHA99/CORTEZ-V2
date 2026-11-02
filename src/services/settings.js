@@ -53,7 +53,6 @@ function defaultSettings() {
     /* سوق الأعضاء داخل المتجر الداخلي */
     'market.enabled': true,
     'market.maxPerWeek': 2,
-    'market.commissionPercent': 10,
     'market.requireApproval': true,
     'market.maxQty': 5,
     'market.durationDays': 14,

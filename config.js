@@ -191,7 +191,6 @@ const config = {
     bloodPact: true,
     duty: true,
     operations: true,
-    treasury: true,
     tickets: true,
     leaderboard: true,
     memberCards: true,

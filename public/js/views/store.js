@@ -146,7 +146,6 @@ function openListingForm(root) {
           <div class="mk-preview hidden" id="mk-preview"><img alt="معاينة" /></div>
         </div>
         <div class="market-terms">
-          <span>العمولة ${num(limits.commissionPercent)}% تُخصم لصالح الخزينة عند البيع.</span>
           <span>مدة العرض ${num(limits.durationDays)} يومًا، والحد ${num(limits.maxQty)} قطعة.</span>
           ${limits.requireApproval ? '<span>الإعلان يظهر بعد موافقة القيادة.</span>' : ''}
         </div>
@@ -246,7 +245,7 @@ function renderMarket(root) {
     <div class="market-head">
       <div class="market-head-info">
         <h3>سوق الأعضاء</h3>
-        <p class="muted">اعرض عتادك للعائلة. القيادة تأخذ ${num(limits.commissionPercent)}% عمولة تدخل الخزينة.</p>
+        <p class="muted">اعرض عتادك للعائلة، ويصل كامل المبلغ إليك عند البيع.</p>
       </div>
       <div class="market-head-side">
         <div class="market-quota-pill ${quota.remaining > 0 ? '' : 'is-empty'}">
@@ -333,7 +332,7 @@ export async function render(root) {
       ${pageHeader({
         kicker: 'INTERNAL STORE',
         title: 'المتجر الداخلي',
-        description: 'عتاد العائلة، وأيضًا سوق بين الأعضاء بعمولة تعود للخزينة.'
+        description: 'عتاد العائلة، وأيضًا سوق بين الأعضاء.'
       })}
 
       <div class="store-tabs">

@@ -26,7 +26,7 @@ const WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأر�
 
 const GROUP_LABELS = {
   dashboard: 'الداشبورد', attendance: 'الحضور', leaderboard: 'لوحة الشرف', members: 'الأعضاء', ranks: 'الرتب',
-  duty: 'الدوام', operations: 'العمليات', treasury: 'الخزينة', store: 'المتجر', orders: 'الطلبات',
+  duty: 'الدوام', operations: 'العمليات', store: 'المتجر', orders: 'الطلبات',
   discipline: 'الانضباط', tickets: 'التذاكر', votes: 'التصويت', pacts: 'عقد الدم',
   announcements: 'الإعلانات', settings: 'الإعدادات', audit: 'سجل التدقيق', system: 'النظام'
 };
@@ -647,13 +647,12 @@ async function tabStore(box) {
 
       <div class="card"><div class="card-body adm-form">
         <h3>سوق الأعضاء</h3>
-        <p class="adm-note">يسمح للأعضاء بعرض منتجاتهم داخل المتجر الداخلي. كل بيع يُخصم منه عمولة تدخل الخزينة تلقائيًا.</p>
+        <p class="adm-note">يسمح للأعضاء بعرض منتجاتهم داخل المتجر الداخلي. كل بيع يُسجَّل في السوق ويعود كامل مبلغه للبائع.</p>
         ${canSettings ? `
           ${sw('mkOpen', 'سوق الأعضاء مفتوح', s['market.enabled'] !== false)}
           ${sw('mkApproval', 'إعلانات الأعضاء تحتاج موافقة القيادة', s['market.requireApproval'] !== false)}
           <div class="adm-grid">
             <label>عدد الإعلانات في الأسبوع<input type="number" name="mkPerWeek" min="0" max="50" value="${Number(s['market.maxPerWeek'] ?? 2)}" /></label>
-            <label>نسبة العمولة %<input type="number" name="mkCommission" min="0" max="50" value="${Number(s['market.commissionPercent'] ?? 10)}" /></label>
             <label>أقصى كمية في الإعلان<input type="number" name="mkMaxQty" min="1" max="99" value="${Number(s['market.maxQty'] ?? 5)}" /></label>
             <label>مدة العرض (أيام)<input type="number" name="mkDays" min="1" max="90" value="${Number(s['market.durationDays'] ?? 14)}" /></label>
             <label>أدنى سعر<input type="number" name="mkMinPrice" min="1" value="${Number(s['market.minPrice'] ?? 1)}" /></label>
@@ -724,7 +723,6 @@ async function tabStore(box) {
           'market.enabled': box.querySelector('[name="mkOpen"]').checked,
           'market.requireApproval': box.querySelector('[name="mkApproval"]').checked,
           'market.maxPerWeek': Number(box.querySelector('[name="mkPerWeek"]').value) || 0,
-          'market.commissionPercent': Number(box.querySelector('[name="mkCommission"]').value) || 0,
           'market.maxQty': Number(box.querySelector('[name="mkMaxQty"]').value) || 1,
           'market.durationDays': Number(box.querySelector('[name="mkDays"]').value) || 14,
           'market.minPrice': Number(box.querySelector('[name="mkMinPrice"]').value) || 1,

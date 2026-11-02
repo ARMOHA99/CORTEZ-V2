@@ -198,7 +198,7 @@ async function seedWelcomeAnnouncement() {
   if (count > 0) return false;
   await Announcement.create({
     title: `أهلاً بكم في منصة ${config.org.name}`,
-    body: `تم تشغيل المنصة بنجاح. يا أهل ${config.org.name}، الدم لا ينسى، والولاء يُكتب في السجل. تابعوا الدوام، العمليات، والخزينة من لوحة القيادة.`,
+    body: `تم تشغيل المنصة بنجاح. يا أهل ${config.org.name}، الدم لا ينسى، والولاء يُكتب في السجل. تابعوا الدوام والعمليات من لوحة القيادة.`,
     severity: 'normal',
     active: true,
     pinned: true,
