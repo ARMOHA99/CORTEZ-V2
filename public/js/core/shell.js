@@ -8,6 +8,7 @@ import { initSocket } from './socket.js';
 import * as sound from './sound.js';
 import { applyBrand } from './brand.js';
 import { icon } from './icons.js';
+import { openMemberCard } from './member-card.js';
 
 const NAV = [
   { group: 'عام', items: [
@@ -163,8 +164,28 @@ export function initShell() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setDrawer(false); });
   window.addEventListener('hashchange', () => setDrawer(false));
 
-  if (profileBtn && profileMenu) {
-    profileBtn.addEventListener('click', (e) => { e.stopPropagation(); profileMenu.classList.toggle('hidden'); if (notifPanel) notifPanel.classList.add('hidden'); });
+  const profileMore = document.getElementById('profile-more');
+
+  /* الاسم/الصورة = بطاقتي مباشرة، والسهم = قائمة الحساب */
+  if (profileBtn) {
+    profileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (profileMenu) profileMenu.classList.add('hidden');
+      if (notifPanel) notifPanel.classList.add('hidden');
+      sound.click();
+      const me = state.user && (state.user.id || state.user._id);
+      if (me) openMemberCard(me);
+      else window.location.hash = '#/profile';
+    });
+  }
+
+  if (profileMore && profileMenu) {
+    profileMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('hidden');
+      if (notifPanel) notifPanel.classList.add('hidden');
+      sound.click();
+    });
   }
   if (notifBtn && notifPanel) {
     notifBtn.addEventListener('click', (e) => { e.stopPropagation(); notifPanel.classList.toggle('hidden'); if (profileMenu) profileMenu.classList.add('hidden'); get('/api/me/notifications').then((d) => { state.notifications = { unread: d.unread || 0, items: d.items || [] }; renderNotifications(); emit('notifications', state.notifications); }).catch(() => {}); });

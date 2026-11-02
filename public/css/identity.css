@@ -236,3 +236,23 @@ html[data-theme='light'] .landing-preview {
   .landing-extra { grid-template-columns: 1fr; }
   .landing-preview { order: -1; }
 }
+
+/* ── طبقات الواجهة: القوائم تظهر فوق المحتوى دائمًا ──
+   كان الشريط العلوي بـ 80 والقائمة داخله بـ 200، فتغلب عليه بطاقات
+   المحتوى وتختفي القائمة تحتها. هنا نرفع الطبقات ونحفظ ترتيبها:
+   المحتوى < الجوال < الشريط < القائمة < القائمة الجانبية < النوافذ */
+.topbar { z-index: 1300; }
+.topbar-actions { position: relative; }
+.sidebar { z-index: 1400; }
+.dropdown { z-index: 1450; }
+.profile-menu { z-index: 1460; }
+.notif-wrap { position: relative; }
+.profile-more { width: 28px; height: 28px; padding: 0; }
+.profile-more .ico { transition: transform 0.18s var(--ease); }
+.profile-more:hover .ico { transform: translateY(1px); }
+.icon-btn .bell { display: block; }
+
+@media (max-width: 900px) {
+  .app::after { z-index: 1350; }
+  .mobile-nav { z-index: 1200; }
+}
