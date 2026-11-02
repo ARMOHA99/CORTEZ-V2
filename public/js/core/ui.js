@@ -181,7 +181,7 @@ export function userCell(user, subtitle = '') {
 
 export function rankPill(rankName, color) {
   if (!rankName) return '';
-  return `<span class="rank-pill" style="color:${attr(color || '#e63946')}">${esc(rankName)}</span>`;
+  return `<span class="rank-pill" style="color:${attr(color || '#22c55e')}">${esc(rankName)}</span>`;
 }
 
 export function badge(text, tone = '') {

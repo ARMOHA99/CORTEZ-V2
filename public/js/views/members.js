@@ -1,5 +1,6 @@
 import { get } from '../core/api.js';
 import { esc, pageHeader, userCell, statusBadge, badge, debounce, emptyState } from '../core/ui.js';
+import { openMemberBadges } from './achievements.js';
 
 export const meta = { title: 'سجل الأعضاء', kicker: 'MEMBERS' };
 
@@ -30,7 +31,7 @@ export async function render(root) {
           <div class="card-body" style="overflow-x:auto">
             ${items.length ? `
             <table class="table">
-              <thead><tr><th>العضو</th><th>الرتبة</th><th>الحالة</th><th>آخر ظهور</th></tr></thead>
+              <thead><tr><th>العضو</th><th>الرتبة</th><th>الحالة</th><th>آخر ظهور</th><th>الأوسمة</th></tr></thead>
               <tbody>
                 ${items.map((m) => `
                   <tr>
@@ -38,6 +39,7 @@ export async function render(root) {
                     <td><span class="rank-pill" style="color:${esc(m.rankColor)}">${esc(m.rankIcon || '')} ${esc(m.rankName)}</span></td>
                     <td>${m.blocked ? badge('محظور', 'danger') : (m.duty && m.duty.status === 'on' ? statusBadge('on') : statusBadge('off'))}</td>
                     <td class="muted">${m.lastSeen ? new Date(m.lastSeen).toLocaleDateString('ar-SA') : '—'}</td>
+                    <td><button class="btn btn-ghost btn-sm" type="button" data-ach-member="${esc(String(m._id))}" data-ach-name="${esc(m.displayName || m.username || '')}">🏅 أوسمته</button></td>
                   </tr>`).join('')}
               </tbody>
             </table>` : emptyState('لا نتائج', 'جرّب اسمًا آخر')}
@@ -51,6 +53,9 @@ export async function render(root) {
         </div>`;
       const prev = box.querySelector('#mem-prev');
       const next = box.querySelector('#mem-next');
+      box.querySelectorAll('[data-ach-member]').forEach((btn) => {
+        btn.addEventListener('click', () => openMemberBadges(btn.dataset.achMember, btn.dataset.achName || ''));
+      });
       if (prev) prev.addEventListener('click', () => { page = Math.max(1, page - 1); load(); });
       if (next) next.addEventListener('click', () => { page += 1; load(); });
     } catch (error) {

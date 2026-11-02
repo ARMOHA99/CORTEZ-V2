@@ -124,7 +124,7 @@ export async function render(root) {
         <div class="card-body">
           <div class="row" style="flex-wrap:wrap">
             ${data.dutyNow.map(d => `
-              <div class="chip" style="border-color:${esc(d.rankColor || '#e63946')}">${esc(d.name)} • ${Math.floor(d.minutes/60)}س ${d.minutes%60}د</div>
+              <div class="chip" style="border-color:${esc(d.rankColor || '#22c55e')}">${esc(d.name)} • ${Math.floor(d.minutes/60)}س ${d.minutes%60}د</div>
             `).join('')}
           </div>
         </div>

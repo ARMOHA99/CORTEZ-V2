@@ -36,14 +36,14 @@ function balanceChart(transactions, currentBalance) {
   const area = `${line} L${x(points.length - 1).toFixed(1)},${y(min).toFixed(1)} L${x(0).toFixed(1)},${y(min).toFixed(1)} Z`;
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => min + span * t);
   const grid = ticks.map((v) => `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="rgba(255,255,255,.07)" /><text x="${pad.l - 8}" y="${(y(v) + 4).toFixed(1)}" fill="#9b9296" font-size="11" text-anchor="end">${num(Math.round(v))}</text>`).join('');
-  const dots = points.slice(1).map((p, i) => `<circle cx="${x(i + 1).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" fill="${p.tx.type === 'income' ? '#7ff0b0' : '#ff8a94'}" stroke="#0b0b0e" stroke-width="1.5"><title>${p.tx.type === 'income' ? '+' : '−'}${num(p.tx.amount)} • ${esc(p.tx.description || '')} • الرصيد ${num(p.v)}</title></circle>`).join('');
+  const dots = points.slice(1).map((p, i) => `<circle cx="${x(i + 1).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" fill="${p.tx.type === 'income' ? '#7ff0b0' : '#7ff0b0'}" stroke="#0b0b0e" stroke-width="1.5"><title>${p.tx.type === 'income' ? '+' : '−'}${num(p.tx.amount)} • ${esc(p.tx.description || '')} • الرصيد ${num(p.v)}</title></circle>`).join('');
   const labelIdx = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]));
   const xl = labelIdx.map((i) => `<text x="${x(i).toFixed(1)}" y="${H - 8}" fill="#9b9296" font-size="11" text-anchor="middle">${esc(points[i].label)}</text>`).join('');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="حركة الرصيد" style="display:block">
-    <defs><linearGradient id="bal-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e63946" stop-opacity=".35"/><stop offset="1" stop-color="#e63946" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="bal-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22c55e" stop-opacity=".35"/><stop offset="1" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
     ${grid}
     <path d="${area}" fill="url(#bal-fill)"/>
-    <path d="${line}" fill="none" stroke="#e63946" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${line}" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
     ${dots}${xl}
   </svg>`;
 }
@@ -64,7 +64,7 @@ export async function render(root) {
       
       <div class="card" style="margin-top:18px">
         <div class="card-head"><div><p class="eyebrow">BALANCE</p><h3>حركة الرصيد (زيادة ونقصان)</h3></div>
-          <div class="muted" style="font-size:12px"><span style="color:#7ff0b0">●</span> إيداع &nbsp; <span style="color:#ff8a94">●</span> سحب</div></div>
+          <div class="muted" style="font-size:12px"><span style="color:#7ff0b0">●</span> إيداع &nbsp; <span style="color:#7ff0b0">●</span> سحب</div></div>
         <div class="card-body">${balanceChart(t.transactions, t.balance)}</div>
       </div>
       <div class="grid grid-3" style="margin-top:18px">
@@ -78,7 +78,7 @@ export async function render(root) {
                   <strong>${esc(tx.description)}</strong>
                   <small>${esc(tx.category)} • ${timeAgo(tx.createdAt)}${tx.createdByName ? ' • ' + esc(tx.createdByName) : ''}</small>
                 </div>
-                <div class="tx-amount" style="color:${tx.type==='income'?'#7ff0b0':'#ff8a94'}">${tx.type==='income'?'+':'-'}${num(tx.amount)} ${esc(t.currency||'دولار')}</div>
+                <div class="tx-amount" style="color:${tx.type==='income'?'#7ff0b0':'#7ff0b0'}">${tx.type==='income'?'+':'-'}${num(tx.amount)} ${esc(t.currency||'دولار')}</div>
               </div>
             `).join('') : emptyState('لا حركات', '')}
           </div>
@@ -87,7 +87,7 @@ export async function render(root) {
           <div class="card-head"><div><p class="eyebrow">BY CATEGORY</p><h3>حسب التصنيف</h3></div></div>
           <div class="card-body stack">
             ${(t.categories||[]).slice(0,10).map(c => `
-              <div class="kv"><span>${esc(c.category)} ${c.type==='income'?'(دخل)':'(مصروف)'}</span><strong style="color:${c.type==='income'?'#7ff0b0':'#ff8a94'}">${num(c.total)}</strong></div>
+              <div class="kv"><span>${esc(c.category)} ${c.type==='income'?'(دخل)':'(مصروف)'}</span><strong style="color:${c.type==='income'?'#7ff0b0':'#7ff0b0'}">${num(c.total)}</strong></div>
             `).join('')}
           </div>
         </div>

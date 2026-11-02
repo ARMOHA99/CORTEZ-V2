@@ -1,6 +1,6 @@
 import { get, post, del } from '../core/api.js';
 import { state, can } from '../core/state.js';
-import { esc, num, pageHeader, emptyState, toast, date } from '../core/ui.js';
+import { esc, num, pageHeader, emptyState, toast, date, openModal } from '../core/ui.js';
 import * as sound from '../core/sound.js';
 
 export const meta = { title: 'الأوسمة', kicker: 'ACHIEVEMENTS' };
@@ -73,6 +73,55 @@ function renderList(root) {
   if (counter) counter.textContent = `${list.length} وسام`;
 }
 
+/* عرض أوسمة عضو آخر في نافذة (يستخدمه سجل الأعضاء ولوحة الشرف) */
+export async function openMemberBadges(memberId, fallbackName = '') {
+  const box = openModal({
+    title: fallbackName ? `أوسمة ${fallbackName}` : 'أوسمة العضو',
+    subtitle: 'MEMBER ACHIEVEMENTS',
+    body: '<div class="view-loading"><div class="loader-ring"></div></div>',
+    footer: '<button class="btn btn-ghost" data-close>إغلاق</button>',
+    onMount: (m) => {
+      const btn = m.el.querySelector('[data-close]');
+      if (btn) btn.onclick = () => m.close();
+    }
+  });
+  const body = box.el.querySelector('.modal-body') || box.el;
+  try {
+    const data = await get(`/api/achievements/u/${memberId}`);
+    const member = data.member || {};
+    const stats = data.stats || { total: 0, unlocked: 0 };
+    const owned = (data.badges || []).filter((badge) => badge.unlocked);
+    const locked = (data.badges || []).filter((badge) => !badge.unlocked).length;
+    body.innerHTML = `
+      <div class="ach-member-head">
+        <div class="ach-member-avatar">${
+          member.avatar ? `<img src="${esc(member.avatar)}" alt="" />` : esc((member.name || 'ع').charAt(0))
+        }</div>
+        <div class="ach-member-id">
+          <strong>${esc(member.name || fallbackName || 'عضو')}</strong>
+          <span class="muted">${esc(member.username ? '@' + member.username : '')}</span>
+        </div>
+        <div class="ach-member-score">
+          <b>${num(stats.unlocked || owned.length)}</b>
+          <span>من ${num(stats.total || 0)}</span>
+        </div>
+      </div>
+      <div class="ach-mini-grid">
+        ${owned.length
+          ? owned.map((badge) => `
+            <div class="ach-mini" style="--ach:${esc(badge.color || '#22c55e')}" title="${esc(badge.req || '')}">
+              <span class="ach-mini-medal shape-${esc(badge.shape || 'hex')}">${esc(badge.icon || '★')}</span>
+              <span class="ach-mini-name">${esc(badge.name)}</span>
+            </div>`).join('')
+          : '<p class="muted">لم يحصل على أي وسام بعد.</p>'}
+      </div>
+      <p class="muted" style="margin-top:10px">${num(locked)} وسام ما زال مقفلًا.</p>`;
+  } catch (error) {
+    body.innerHTML = `<p class="muted">${esc(error.message)}</p>`;
+  }
+  return box;
+}
+
 export async function render(root) {
   root.innerHTML = '<div class="view-loading"><div class="loader-ring"></div></div>';
   try {
@@ -105,7 +154,7 @@ export async function render(root) {
           ${(data.leaders || []).length ? `
             <div class="ach-leaders">
               <span class="muted">الأكثر أوسمة:</span>
-              ${data.leaders.map((leader) => `<a class="ach-leader" href="#/members" title="${esc(leader.name)}"><span>${esc(leader.name)}</span><b>${num(leader.count)}</b></a>`).join('')}
+              ${data.leaders.map((leader) => `<button class="ach-leader" type="button" data-ach-member="${esc(leader.id)}" data-ach-name="${esc(leader.name)}" title="اعرض أوسمة ${esc(leader.name)}"><span>${esc(leader.name)}</span><b>${num(leader.count)}</b></button>`).join('')}
             </div>` : ''}
         </div>
       </div>
@@ -136,7 +185,11 @@ export async function render(root) {
         renderList(root);
       });
     });
-    root.querySelectorAll('.ach-chip[data-group]').forEach((btn) => {
+    root.querySelectorAll('[data-ach-member]').forEach((btn) => {
+    btn.addEventListener('click', () => openMemberBadges(btn.dataset.achMember, btn.dataset.achName || ''));
+  });
+
+  root.querySelectorAll('.ach-chip[data-group]').forEach((btn) => {
       btn.addEventListener('click', () => {
         group = btn.dataset.group;
         root.querySelectorAll('.ach-chip[data-group]').forEach((other) => other.classList.toggle('active', other === btn));

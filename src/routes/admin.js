@@ -269,7 +269,7 @@ router.post(
       name: String(body.name || key).slice(0, 60),
       short: String(body.short || key.slice(0, 8)).toUpperCase().slice(0, 20),
       level: Math.max(0, Math.min(999, Number(body.level) || 10)),
-      color: /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : '#e63946',
+      color: /^#[0-9a-fA-F]{6}$/.test(body.color) ? body.color : '#22c55e',
       icon: String(body.icon || '◆').slice(0, 8),
       permissions,
       discordRoleId: String(body.discordRoleId || '').trim(),

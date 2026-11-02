@@ -6,7 +6,7 @@ const rankSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, maxlength: 60 },
     short: { type: String, default: '', trim: true, maxlength: 20 },
     level: { type: Number, required: true, min: 0, max: 1000, index: true },
-    color: { type: String, default: '#e63946', match: /^#[0-9a-fA-F]{6}$/ },
+    color: { type: String, default: '#22c55e', match: /^#[0-9a-fA-F]{6}$/ },
     icon: { type: String, default: '◆', maxlength: 8 },
     permissions: { type: [String], default: [] },
     discordRoleId: { type: String, default: '' },

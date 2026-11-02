@@ -40,7 +40,7 @@ self.addEventListener('fetch', (event) => {
              <meta name="viewport" content="width=device-width,initial-scale=1" />
              <title>بلا اتصال — CORTEZ</title>
              <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0a0c;color:#f4f1f2;font-family:system-ui,sans-serif;text-align:center;padding:24px}
-             a{color:#e63946;font-weight:700}</style></head>
+             a{color:#22c55e;font-weight:700}</style></head>
              <body><div><h1>لا يوجد اتصال</h1><p style="color:#9b9296">عد إلى الشبكة ثم أعد المحاولة.</p>
              <a href="/">المحاولة من جديد</a></div></body></html>`,
             { headers: { 'Content-Type': 'text/html; charset=utf-8' } }

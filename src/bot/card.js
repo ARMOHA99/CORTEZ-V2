@@ -31,7 +31,7 @@ function registerFonts() {
 function palette(rank) {
   const rankKey = rank && rank.key ? rank.key : 'member';
   const map = {
-    owner: ['#2a0509', '#7d0f1c', '#ff4757'],
+    owner: ['#2a0509', '#7d0f1c', '#4ade80'],
     operations: ['#1d1206', '#7a4210', '#ff9f43'],
     business: ['#04191b', '#0f5a5d', '#4ecdc4'],
     member: ['#101014', '#2c2c35', '#d9d4d6'],

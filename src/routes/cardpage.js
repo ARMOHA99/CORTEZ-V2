@@ -112,7 +112,7 @@ router.get(
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>بطاقة غير موجودة — ${escapeHtml(org.nameLatin)}</title>
 <meta name="robots" content="noindex" />
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0a0c;color:#f4f1f2;font-family:system-ui,sans-serif;text-align:center}a{color:#e63946}</style>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0a0c;color:#f4f1f2;font-family:system-ui,sans-serif;text-align:center}a{color:#22c55e}</style>
 </head><body><div><h1>بطاقة غير موجودة</h1><p style="color:#9b9296">هذا العضو غير مسجّل أو غير مفعّل.</p><a href="/">العودة إلى ${escapeHtml(org.name)}</a></div></body></html>`);
     }
 
@@ -137,7 +137,7 @@ router.get(
     const badgeHtml = badgeItems
       .map(
         (item) =>
-          `<span class="badge-chip" style="--bc:${escapeHtml(item.color || '#e63946')}" title="${escapeHtml(item.name)}"><span class="badge-ico">${escapeHtml(item.icon)}</span><span class="badge-name">${escapeHtml(item.name)}</span></span>`
+          `<span class="badge-chip" style="--bc:${escapeHtml(item.color || '#22c55e')}" title="${escapeHtml(item.name)}"><span class="badge-ico">${escapeHtml(item.icon)}</span><span class="badge-name">${escapeHtml(item.name)}</span></span>`
       )
       .join('');
 
@@ -170,7 +170,7 @@ router.get(
 <meta name="twitter:description" content="${escapeHtml(description)}" />
 <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
 <style>
-  :root{--primary:#e63946;--surface:#111114;--line:rgba(255,255,255,.09);--text:#f4f1f2;--muted:#9b9296}
+  :root{--primary:#22c55e;--surface:#111114;--line:rgba(255,255,255,.09);--text:#f4f1f2;--muted:#9b9296}
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;background:radial-gradient(1200px 600px at 50% -10%,rgba(230,57,70,.18),transparent 60%),#0a0a0c;color:var(--text);font-family:"Tajawal","Cairo",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:28px 16px 56px}
   .wrap{width:100%;max-width:720px}

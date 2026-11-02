@@ -39,14 +39,31 @@ router.get(
 router.get(
   '/u/:id',
   requireAuth,
-  requirePermission('members:view'),
   asyncHandler(async (req, res) => {
     if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
     const User = require('../models/User');
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id).lean();
     if (!user) throw httpError(404, 'العضو غير موجود', 'NOT_FOUND');
     const result = await achievements.forUser(user);
-    res.json({ badges: result.badges.filter((badge) => badge.unlocked), stats: result.stats });
+    const owned = await achievements.wallet(user._id);
+    const ownedMap = new Map(owned.map((row) => [row.key, row]));
+    const badges = result.badges.map((badge) => ({
+      ...badge,
+      awardedAt: ownedMap.has(badge.key) ? ownedMap.get(badge.key).awardedAt : null,
+      manual: ownedMap.has(badge.key) ? ownedMap.get(badge.key).source === 'manual' : false
+    }));
+    res.json({
+      member: {
+        _id: String(user._id),
+        name: user.displayName || user.username || 'عضو',
+        username: user.username || '',
+        avatar: user.avatarUrl || user.avatar || '',
+        rank: user.rank || ''
+      },
+      badges,
+      stats: result.stats,
+      owned: owned.length
+    });
   })
 );
 

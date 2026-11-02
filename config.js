@@ -36,10 +36,10 @@ const config = {
 
   /* ───────────────────────────── الهوية البصرية ───────────────────────────── */
   theme: {
-    primary: '#e63946',
-    primaryDark: '#9d1420',
-    primarySoft: 'rgba(230, 57, 70, 0.16)',
-    accent: '#ff8fa3',
+    primary: '#22c55e',
+    primaryDark: '#15803d',
+    primarySoft: 'rgba(34, 197, 94, 0.16)',
+    accent: '#86efac',
     bg: '#0a0a0c',
     bgDeep: '#050506',
     surface: '#111114',
@@ -47,7 +47,7 @@ const config = {
     muted: '#9b9296',
     success: '#2ecc71',
     warning: '#f5a623',
-    danger: '#e63946',
+    danger: '#22c55e',
     font: 'Tajawal',
     fontDisplay: 'Cairo'
   },
@@ -96,7 +96,7 @@ const config = {
     cardCommand: 'card',
     cardCooldownSeconds: 20,
     activity: 'الدم لا ينسى • CORTEZ',
-    embedColor: 0xe63946
+    embedColor: 0x22c55e
   },
 
   /* ───────────────────────────── الصوت ───────────────────────────── */

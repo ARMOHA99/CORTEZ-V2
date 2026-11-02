@@ -111,7 +111,7 @@
   background: rgba(255,255,255,0.02);
 }
 
-.announcement.critical { border-right-color: var(--danger); background: rgba(230,57,70,0.08); }
+.announcement.critical { border-right-color: var(--danger); background: rgba(34, 197, 94,0.08); }
 .announcement.urgent { border-right-color: var(--warning); }
 
 .announcement .a-head {
@@ -139,8 +139,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(230,57,70,0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(230,57,70,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94,0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(34, 197, 94,0); }
 }
 
 .global-loading {
@@ -252,8 +252,8 @@
 }
 
 .rooms-btn:hover {
-  background: rgba(230, 57, 70, 0.18);
-  border-color: rgba(230, 57, 70, 0.55);
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.55);
 }
 
 .rooms-ico {
@@ -281,8 +281,8 @@
 }
 
 .adm-tab.active {
-  background: rgba(230, 57, 70, 0.2);
-  border-color: rgba(230, 57, 70, 0.6);
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.6);
   color: #fff;
 }
 
@@ -347,7 +347,7 @@
 .adm-switch input {
   width: 20px;
   height: 20px;
-  accent-color: #e63946;
+  accent-color: #22c55e;
 }
 
 .adm-logo-prev {
@@ -361,7 +361,7 @@
   background: rgba(0, 0, 0, 0.3);
   font-size: 34px;
   font-weight: 900;
-  color: #e63946;
+  color: #22c55e;
 }
 
 .adm-logo-prev img {
@@ -378,7 +378,7 @@
 
 .adm-perm-group h5 {
   margin: 0 0 8px;
-  color: #e63946;
+  color: #22c55e;
   font-size: 12px;
   letter-spacing: 0.08em;
 }
@@ -393,7 +393,7 @@
 }
 
 .adm-perm input {
-  accent-color: #e63946;
+  accent-color: #22c55e;
 }
 
 .adm-rank-card {
@@ -447,7 +447,7 @@
   height: 64px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(230, 57, 70, 0.6);
+  border: 2px solid rgba(34, 197, 94, 0.6);
   background: #1a1a1f;
 }
 
@@ -513,7 +513,7 @@
 }
 
 .member-link:hover {
-  color: #ff6b76;
+  color: #4ade80;
 }
 
 .vote-form-opts {
@@ -526,14 +526,14 @@
 }
 
 [data-member-id]:hover strong {
-  color: #ff6b76;
+  color: #4ade80;
 }
 
 /* ═══════════════ الهدف الأسبوعي والرسوم البيانية ═══════════════ */
 .goal-card .goal-pct {
   font-size: 28px;
   font-weight: 900;
-  color: #e63946;
+  color: #22c55e;
 }
 
 .goal-preview {
@@ -544,7 +544,7 @@
 }
 
 .att-cell.no {
-  color: #ff8a94;
+  color: #7ff0b0;
   background: rgba(255, 138, 148, 0.12);
   border-color: rgba(255, 138, 148, 0.4);
 }
@@ -561,7 +561,7 @@
 }
 
 .attendance-table .today-col {
-  background: rgba(230, 57, 70, 0.08);
+  background: rgba(34, 197, 94, 0.08);
 }
 
 .attendance-table tfoot td {
@@ -591,8 +591,8 @@
   gap: 8px;
   padding: 6px 8px 6px 12px;
   border-radius: 999px;
-  background: rgba(230, 57, 70, 0.16);
-  border: 1px solid rgba(230, 57, 70, 0.5);
+  background: rgba(34, 197, 94, 0.16);
+  border: 1px solid rgba(34, 197, 94, 0.5);
   font-weight: 700;
   font-size: 13px;
 }
@@ -658,7 +658,7 @@
 }
 
 .picker-btn:hover {
-  background: rgba(230, 57, 70, 0.3);
+  background: rgba(34, 197, 94, 0.3);
 }
 
 .picker-list {
@@ -684,7 +684,7 @@
 }
 
 .picker-opt:hover {
-  background: rgba(230, 57, 70, 0.18);
+  background: rgba(34, 197, 94, 0.18);
 }
 
 .picker-opt small {

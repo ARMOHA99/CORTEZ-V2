@@ -242,7 +242,7 @@ async function tabSettings(box) {
         botRow(st.channels.orders, 'قناة طلبات المتجر محددة'),
         botRow(st.channels.internalOrders, 'قناة المتجر الداخلي محددة'),
         botRow(st.channels.operations, 'قناة العمليات محددة'),
-        st.lastError ? `<p class="adm-note" style="color:#ff6b76">${esc(st.lastError)}</p>` : ''
+        st.lastError ? `<p class="adm-note" style="color:#4ade80">${esc(st.lastError)}</p>` : ''
       ].join('');
     } catch (e) { botBox.innerHTML = `<span class="muted">${esc(e.message)}</span>`; }
   }
@@ -267,7 +267,7 @@ async function tabSettings(box) {
       const modal = openModal({
         title: 'فحص مزامنة حسابك',
         subtitle: 'SYNC CHECK',
-        body: `${res.problem ? `<p style="color:#ff6b76;font-weight:700">${esc(res.problem)}</p>` : '<p style="color:#2ecc71;font-weight:700">لا توجد مشكلة ظاهرة في المزامنة.</p>'}<pre style="direction:ltr;text-align:left;white-space:pre-wrap;font-size:12px">${esc(JSON.stringify(res, null, 2))}</pre>`
+        body: `${res.problem ? `<p style="color:#4ade80;font-weight:700">${esc(res.problem)}</p>` : '<p style="color:#2ecc71;font-weight:700">لا توجد مشكلة ظاهرة في المزامنة.</p>'}<pre style="direction:ltr;text-align:left;white-space:pre-wrap;font-size:12px">${esc(JSON.stringify(res, null, 2))}</pre>`
       });
       if (!modal) return;
     } catch (e) { toast(e.message, 'danger'); }
@@ -344,7 +344,7 @@ async function tabSettings(box) {
 /* ═══════════════════════ الرتب والصلاحيات ═══════════════════════ */
 function openRankModal(rank, perms, reload, discordRoles = []) {
   const editing = Boolean(rank);
-  const r = rank || { key: '', name: '', short: '', level: 10, order: 50, color: '#e63946', icon: '◆', discordRoleId: '', description: '', permissions: [] };
+  const r = rank || { key: '', name: '', short: '', level: 10, order: 50, color: '#22c55e', icon: '◆', discordRoleId: '', description: '', permissions: [] };
   const have = new Set(r.permissions || []);
   const groups = {};
   perms.forEach((p) => { (groups[p.key.split(':')[0]] = groups[p.key.split(':')[0]] || []).push(p); });
@@ -361,7 +361,7 @@ function openRankModal(rank, perms, reload, discordRoles = []) {
           <label>الاختصار<input type="text" name="short" value="${esc(r.short || '')}" maxlength="20" /></label>
           <label>المستوى (الأعلى = أقوى)<input type="number" name="level" value="${Number(r.level) || 0}" min="0" max="999" /></label>
           <label>الترتيب في القوائم<input type="number" name="order" value="${Number(r.order) || 0}" /></label>
-          <label>اللون<input type="color" name="color" value="${esc(r.color || '#e63946')}" /></label>
+          <label>اللون<input type="color" name="color" value="${esc(r.color || '#22c55e')}" /></label>
           <label>الرمز<input type="text" name="icon" value="${esc(r.icon || '◆')}" maxlength="8" /></label>
           <label>اختر رول من سيرفر ديسكورد
             <select id="role-pick">

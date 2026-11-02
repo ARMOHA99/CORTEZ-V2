@@ -9,7 +9,7 @@ const TIER_META = {
   bronze: { label: 'برونزي', color: '#c98a4b', rank: 1 },
   silver: { label: 'فضي', color: '#c8d2dc', rank: 2 },
   gold: { label: 'ذهبي', color: '#f6c352', rank: 3 },
-  legend: { label: 'أسطوري', color: '#e63946', rank: 4 }
+  legend: { label: 'أسطوري', color: '#22c55e', rank: 4 }
 };
 
 const CATALOG = [
@@ -24,7 +24,7 @@ const CATALOG = [
     tier: 'bronze',
     icon: '🩸',
     shape: 'drop',
-    color: '#e63946',
+    color: '#22c55e',
     group: 'البداية'
   },
   {
@@ -143,7 +143,7 @@ const CATALOG = [
     tier: 'legend',
     icon: '👑',
     shape: 'crown',
-    color: '#e63946',
+    color: '#22c55e',
     group: 'الدوام'
   },
   {
@@ -372,7 +372,7 @@ const CATALOG = [
     tier: 'gold',
     icon: '🎖️',
     shape: 'shield',
-    color: '#e63946',
+    color: '#22c55e',
     group: 'الرتبة'
   },
   {

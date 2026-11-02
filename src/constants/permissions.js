@@ -47,7 +47,7 @@ const RANKS = [
     name: 'مدير عام',
     short: 'DON',
     level: 100,
-    color: '#e63946',
+    color: '#22c55e',
     icon: '♛',
     isSystem: true,
     order: 1,

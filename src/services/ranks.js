@@ -34,6 +34,12 @@ async function getRanks(force = false) {
     return cache;
   }
   const Rank = require('../models/Rank');
+  /* ترحيل لوني لمرة واحدة: أي رتبة محفوظة باللون الأحمر القديم تتحول للأخضر */
+  try {
+    await Rank.updateMany({ color: { $in: ['#e63946', '#E63946', '#9d1420'] } }, { $set: { color: '#22c55e' } });
+  } catch (error) {
+    /* لا شيء */
+  }
   let ranks = await Rank.find({}).sort({ level: -1 }).lean();
   if (!ranks.length) {
     const fallback = fallbackRanks();

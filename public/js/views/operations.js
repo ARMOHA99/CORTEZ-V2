@@ -74,7 +74,7 @@ async function openNewOp(root) {
     if (l2) l2.textContent = 'الإجمالي: ' + moneyText(lostValue);
     const win = form.result.value === 'win';
     const delta = win ? Math.max(0, money + lootValue - lostValue) : -(lostValue + money);
-    form.querySelector('#op-preview').innerHTML = `<div class="kv"><span>أثر العملية على الهدف الأسبوعي</span><strong style="color:${delta >= 0 ? '#7ff0b0' : '#ff8a94'}">${delta >= 0 ? '+' : '−'}${num(Math.abs(delta))} ${esc(label)}</strong></div>`;
+    form.querySelector('#op-preview').innerHTML = `<div class="kv"><span>أثر العملية على الهدف الأسبوعي</span><strong style="color:${delta >= 0 ? '#7ff0b0' : '#7ff0b0'}">${delta >= 0 ? '+' : '−'}${num(Math.abs(delta))} ${esc(label)}</strong></div>`;
   }
 
   const itemOptions = catalog.map((c) => ({ id: c._id, label: c.name, sub: `${num(c.price)} ${label}` }));
