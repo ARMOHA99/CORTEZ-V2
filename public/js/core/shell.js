@@ -165,6 +165,40 @@ export function initShell() {
 
   const profileMore = document.getElementById('profile-more');
 
+  /*
+   * قائمة الحساب تُثبّت داخل حدود الشاشة دائمًا:
+   * لو النافذة قصيرة أو الزر قريب من حافة، تُزاح للداخل بدل أن يُقطع أول عنصر منها.
+   */
+  function placeProfileMenu() {
+    if (!profileMenu || profileMenu.classList.contains('hidden')) return;
+    const trigger = profileMore || profileBtn;
+    if (!trigger) return;
+    profileMenu.style.position = 'fixed';
+    profileMenu.style.marginTop = '0px';
+    profileMenu.style.top = '0px';
+    profileMenu.style.left = '0px';
+    profileMenu.style.right = 'auto';
+    const box = profileMenu.getBoundingClientRect();
+    const rect = trigger.getBoundingClientRect();
+    const margin = 12;
+    const height = Math.min(box.height, window.innerHeight - margin * 2);
+    let top = rect.bottom + 10;
+    if (top + height > window.innerHeight - margin) top = window.innerHeight - height - margin;
+    if (top < margin) top = margin;
+    let left = rect.right - box.width;
+    if (left + box.width > window.innerWidth - margin) left = window.innerWidth - box.width - margin;
+    if (left < margin) left = margin;
+    profileMenu.style.top = `${Math.round(top)}px`;
+    profileMenu.style.left = `${Math.round(left)}px`;
+    profileMenu.style.maxHeight = `${Math.round(height)}px`;
+    profileMenu.style.overflowY = 'auto';
+  }
+
+  if (profileMenu) {
+    window.addEventListener('resize', placeProfileMenu);
+    window.addEventListener('scroll', placeProfileMenu, { passive: true, capture: true });
+  }
+
   /* الاسم/الصورة = بطاقتي مباشرة، والسهم = قائمة الحساب */
   if (profileBtn) {
     profileBtn.addEventListener('click', (e) => {
@@ -183,6 +217,7 @@ export function initShell() {
       e.stopPropagation();
       profileMenu.classList.toggle('hidden');
       if (notifPanel) notifPanel.classList.add('hidden');
+      placeProfileMenu();
       sound.click();
     });
   }

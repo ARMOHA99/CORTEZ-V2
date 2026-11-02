@@ -59,6 +59,39 @@ export async function render(root) {
       total: Math.max(0, summary.totalMinutes || 0)
     };
 
+    /* لوحة النافذة: شريط تقدم + الوقت المتبقي حتى الإغلاق (بتوقيت الجزائر) */
+    const windowPanel = () => {
+      const w = (lock && lock.nightShift) || night || {};
+      if (!w.start || !w.end) return '';
+      const toMin = (value) => {
+        const m = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+        return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+      };
+      const startMin = toMin(w.start);
+      const endMin = toMin(w.end);
+      if (startMin == null || endMin == null) return '';
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Algiers', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(now);
+      const hh = Number(parts.find((p) => p.type === 'hour').value);
+      const mm = Number(parts.find((p) => p.type === 'minute').value);
+      const nowMin = hh * 60 + mm;
+      const span = ((endMin - startMin) + 1440) % 1440 || 1440;
+      let elapsed = ((nowMin - startMin) + 1440) % 1440;
+      const inside = elapsed < span;
+      if (!inside) elapsed = 0;
+      const percent = Math.max(0, Math.min(100, Math.round((elapsed / span) * 100)));
+      const remaining = inside ? (((startMin + span) % 1440) - nowMin + 1440) % 1440 : 0;
+      const remText = inside ? `${Math.floor(remaining / 60)}س ${remaining % 60}د` : 'مغلقة الآن';
+      return `
+        <div class="window-panel">
+          <div class="window-track"><div class="window-fill" style="width:${percent}%"></div></div>
+          <div class="window-meta">
+            <span>${esc(w.start)} → ${esc(w.end)}</span>
+            <span>${inside ? `باقي ${remText} على الإغلاق` : 'تفتح عند ' + esc(w.start)}</span>
+          </div>
+        </div>`;
+    };
+
     const attendanceOn = !state.config || state.config.attendanceEnabled !== false;
     const night = (state.config && state.config.nightShift) || {};
     const lock = data.lock || null;
@@ -67,8 +100,12 @@ export async function render(root) {
       ? `<div class="card" style="margin-bottom:16px;border-color:rgba(234,179,8,.45)"><div class="card-body">
           <strong>قفل الدوام شغّال الآن.</strong>
           <p class="muted" style="margin:6px 0 0">الدوام مسموح فقط من ${esc(lock.nightShift?.start || night.start || '—')} إلى ${esc(lock.nightShift?.end || night.end || '—')} بتوقيت المدينة. تقدر تنهي دوامك الحالي، لكن البدء والاستئناف مقفلين.</p>
+          ${windowPanel()}
         </div></div>`
-      : '';
+      : `<div class="card" style="margin-bottom:16px"><div class="card-body">
+          <strong>${lockedNow ? '' : 'النافذة مفتوحة الآن — تقدر تبدأ دوامك.'}</strong>
+          ${windowPanel()}
+        </div></div>`;
     const statusText = summary.status === 'on' ? 'أنت على الدوام' : summary.status === 'break' ? 'أنت في استراحة' : 'أنت خارج الدوام';
 
     root.innerHTML = `

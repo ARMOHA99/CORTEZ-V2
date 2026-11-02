@@ -67,7 +67,9 @@ async function buildApp() {
     return css
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\s+/g, ' ')
-      .replace(/\s*([{}:;,>~+])\s*/g, '$1')
+      /* لا نلمس + لأن حذف المسافات حولها يُبطل calc() ويُسقط الخاصية كاملة */
+      .replace(/\s*([{}:;,>~])\s*/g, '$1')
+      .replace(/\s+and\s+/g, ' and ')
       .replace(/;}/g, '}')
       .trim();
   }

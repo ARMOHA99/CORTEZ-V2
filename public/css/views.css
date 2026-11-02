@@ -696,3 +696,56 @@
   color: #9b9296;
   text-align: center;
 }
+
+
+/* ═══════════ تحسينات التصميم — الدفعة 16 ═══════════ */
+
+/* 2) لوحة نافذة الدوام: شريط تقدم + عد تنازلي */
+.window-panel { margin-top: 12px; }
+.window-track {
+  height: 8px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, .09);
+}
+.window-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary, #22c55e), var(--primary-dark, #15803d));
+  transition: width 260ms ease;
+}
+.window-meta {
+  display: flex; justify-content: space-between; gap: 10px;
+  margin-top: 6px; font-size: 12px; color: var(--muted, #9b9296);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 3) أرقام موحّدة العرض (لا ترقص أثناء العدّاد) */
+.kpi-value, .stat-value, .window-meta, .table td, .mono-sm, .kv strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4) زر الحفظ ثابت أثناء التمرير في الإدارة */
+.adm-actions {
+  position: sticky; bottom: 0; z-index: 20;
+  padding: 12px 0; margin-top: 8px;
+  background: linear-gradient(180deg, transparent, var(--bg, #0b0f0d) 38%);
+  backdrop-filter: blur(6px);
+}
+.adm-form { scroll-margin-bottom: 90px; }
+
+/* 5) جداول تتمرر بسلاسة على الموبايل */
+@media (max-width: 720px) {
+  .card-body > table.table { display: block; overflow-x: auto; white-space: nowrap; }
+  .adm-actions .btn { width: 100%; }
+}
+
+/* 6) الوضع الفاتح: تباين أوضح للنصوص الثانوية والأسطح */
+[data-theme="light"] .window-track { background: rgba(15, 23, 42, .1); }
+[data-theme="light"] .muted,
+[data-theme="light"] .adm-note,
+[data-theme="light"] .window-meta { color: #4b5563; }
+[data-theme="light"] .adm-actions { background: linear-gradient(180deg, transparent, #ffffff 38%); }
+
+/* 7) انتقالات ناعمة موحّدة */
+.btn, .card, .kpi, .adm-tab, .chip, .window-fill { transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  .btn, .card, .kpi, .adm-tab, .chip, .window-fill { transition: none; }
+}

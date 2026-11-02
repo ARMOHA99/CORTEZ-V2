@@ -1293,7 +1293,11 @@ p {
 
 .dropdown {
   position: absolute;
-  top: calc(100% + 10px);
+  top: 100%;
+  margin-top: 10px;
+  max-height: calc(100vh - 96px);
+  overflow-x: hidden;
+  overflow-y: auto;
   left: 0;
   min-width: 240px;
   z-index: 200;
@@ -1302,7 +1306,6 @@ p {
   background: rgba(16, 16, 20, 0.98);
   box-shadow: var(--shadow);
   backdrop-filter: blur(24px);
-  overflow: hidden;
   animation: dropIn 0.22s var(--ease);
 }
 
