@@ -96,6 +96,7 @@ async function tabSettings(box) {
   try { dcRoles = (await get('/api/admin/discord-roles')).roles || []; } catch (e) { dcRoles = []; }
   const attRoles = Array.isArray(s['attendance.warnRoles']) ? s['attendance.warnRoles'] : ['', '', ''];
   const attExempt = Array.isArray(s['attendance.exemptRanks']) ? s['attendance.exemptRanks'] : ['owner', 'operations', 'business'];
+  const lockBypass = Array.isArray(s['system.nightLockBypass']) ? s['system.nightLockBypass'].map(String) : [];
   const attRoleField = (i) => (dcRoles.length
     ? `<select id="att-role-${i}"><option value="">— بلا —</option>${dcRoles.map((r) => `<option value="${esc(r.id)}" ${String(attRoles[i] || '') === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`
     : `<input type="text" id="att-role-${i}" value="${esc(attRoles[i] || '')}" placeholder="ID الرول" />`);
@@ -149,7 +150,10 @@ async function tabSettings(box) {
           <label style="flex:1">نافذة الدوام: من<input type="time" name="nightStart" value="${esc(night.start || '22:00')}" /></label>
           <label style="flex:1">إلى<input type="time" name="nightEnd" value="${esc(night.end || '06:00')}" /></label>
         </div>
-        <p class="adm-note">هذه النافذة تخص تسجيل الدوام فقط (منع بدء أو إغلاق الشفت خارجها). حساب يوم الحضور والتقييم في بطاقة «الحضور والإنذارات» أسفل — أو خلّها مزامنة وتتبع هذه النافذة تلقائيًا.</p>
+        <label>رتب تتجاوز قفل الدوام (Ctrl للاختيار المتعدد — اتركها فاضية ليطبَّق القفل على الجميع بمن فيهم القيادة)
+          <select id="night-bypass" multiple size="5">${attRanks.map((r) => `<option value="${esc(r.key)}" ${lockBypass.includes(r.key) ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
+        </label>
+        <p class="adm-note">قفل الدوام يمنع <strong>بدء واستئناف</strong> الشفت خارج النافذة، ويسمح دائمًا بإنهاء الدوام. هذه النافذة تخص الدوام فقط؛ حساب يوم الحضور والتقييم في بطاقة «الحضور والإنذارات» أسفل — أو خلّها مزامنة وتتبع هذه النافذة تلقائيًا.</p>
         <label>إغلاق الدوام تلقائيًا بعد (ساعات، 0 = معطّل)<input type="number" name="autoClose" min="0" max="72" value="${Number(s['system.autoCloseDutyHours']) || 0}" /></label>
       </div></div>
 
@@ -356,6 +360,10 @@ async function tabSettings(box) {
       'discord.channel.operations': f.chOperations.value.trim(),
       'system.weekStartDay': Number(f.weekStartDay.value),
       'system.nightShift': { enabled: f.nightEnabled.checked, lock: f.nightLock.checked, start: f.nightStart.value || '22:00', end: f.nightEnd.value || '06:00' },
+      ...(() => {
+        const sel = box.querySelector('#night-bypass');
+        return sel ? { 'system.nightLockBypass': Array.from(sel.selectedOptions).map((o) => o.value) } : {};
+      })(),
       'system.autoCloseDutyHours': Number(f.autoClose.value) || 0,
       'system.weeklyGoalTarget': Number(f.goalTarget.value) || 0,
       'store.externalEnabled': f.storeExternal.checked,

@@ -56,6 +56,7 @@ function defaultSettings() {
     'landing.footerNote': '',
     'system.weekStartDay': config.system.weekStartDay,
     'system.nightShift': config.system.nightShift,
+    'system.nightLockBypass': [],
     'system.weeklyGoalTarget': config.system.weeklyGoalTarget,
     'system.currencyLabel': config.system.currencyLabel,
     'system.maintenance': false,

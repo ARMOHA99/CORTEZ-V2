@@ -12,7 +12,8 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const summary = await dutyService.personalSummary(req.user._id);
-    res.json({ summary, serverTime: new Date().toISOString() });
+    const lock = await dutyService.nightLockState(req.user).catch(() => null);
+    res.json({ summary, lock, serverTime: new Date().toISOString() });
   })
 );
 
@@ -31,7 +32,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const attendanceEnabled = await settingsService.get('attendance.enabled', true);
     if (attendanceEnabled === false) throw httpError(403, 'تسجيل الحضور متوقف حالياً من الإدارة', 'ATTENDANCE_DISABLED');
-    const result = await dutyService.startDuty(req.user, req, { bypassLock: req.permissions.includes('duty:night') });
+    const result = await dutyService.startDuty(req.user, req);
     const summary = await dutyService.personalSummary(req.user._id);
     res.json({ ok: true, ...result, summary });
   })

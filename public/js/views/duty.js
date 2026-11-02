@@ -61,12 +61,21 @@ export async function render(root) {
 
     const attendanceOn = !state.config || state.config.attendanceEnabled !== false;
     const night = (state.config && state.config.nightShift) || {};
+    const lock = data.lock || null;
+    const lockedNow = Boolean(lock && lock.blocked);
+    const lockNote = lockedNow
+      ? `<div class="card" style="margin-bottom:16px;border-color:rgba(234,179,8,.45)"><div class="card-body">
+          <strong>قفل الدوام شغّال الآن.</strong>
+          <p class="muted" style="margin:6px 0 0">الدوام مسموح فقط من ${esc(lock.nightShift?.start || night.start || '—')} إلى ${esc(lock.nightShift?.end || night.end || '—')} بتوقيت المدينة. تقدر تنهي دوامك الحالي، لكن البدء والاستئناف مقفلين.</p>
+        </div></div>`
+      : '';
     const statusText = summary.status === 'on' ? 'أنت على الدوام' : summary.status === 'break' ? 'أنت في استراحة' : 'أنت خارج الدوام';
 
     root.innerHTML = `
       ${pageHeader({ kicker: 'DUTY MANAGEMENT', title: 'نظام الدوام', description: 'ابدأ دوامك، خذ استراحة، وأنهِه في الوقت المناسب.' })}
 
       ${attendanceOn ? '' : '<div class="card" style="margin-bottom:16px"><div class="card-body"><strong>تسجيل الحضور متوقف حالياً من الإدارة.</strong></div></div>'}
+      ${lockNote}
 
       <div class="grid grid-4">
         <div class="kpi"><div class="kpi-label">ساعات الأسبوع</div><div class="kpi-value" id="k-week">${hours(summary.weeklyMinutes)}</div></div>
@@ -80,9 +89,10 @@ export async function render(root) {
         <h3 style="margin:6px 0 18px">${statusText}</h3>
         ${summary.shift ? '<div class="duty-timer" id="duty-timer">00:00:00</div><div class="duty-timer-label">مدة الدوام الحالي</div>' : '<p class="muted">لم تبدأ دوامك بعد</p>'}
         <div class="duty-buttons">
-          ${summary.status === 'off' && attendanceOn ? '<button class="btn btn-primary" id="btn-start">بدء الدوام</button>' : ''}
+          ${summary.status === 'off' && attendanceOn ? `<button class="btn btn-primary" id="btn-start" ${lockedNow ? 'disabled title="مقفل خارج نافذة الدوام"' : ''}>بدء الدوام</button>` : ''}
+          ${lockedNow && summary.status === 'off' ? '<p class="muted" style="margin-top:10px">الزر مقفل لين تدخل نافذة الدوام.</p>' : ''}
           ${summary.status === 'on' ? '<button class="btn btn-ghost" id="btn-pause">استراحة</button><button class="btn btn-danger" id="btn-end">إنهاء الدوام</button>' : ''}
-          ${summary.status === 'break' ? '<button class="btn btn-primary" id="btn-resume">استئناف الدوام</button><button class="btn btn-danger" id="btn-end">إنهاء الدوام</button>' : ''}
+          ${summary.status === 'break' ? `<button class="btn btn-primary" id="btn-resume" ${lockedNow ? 'disabled title="مقفل خارج نافذة الدوام"' : ''}>استئناف الدوام</button><button class="btn btn-danger" id="btn-end">إنهاء الدوام</button>` : ''}
         </div>
       </div>
 

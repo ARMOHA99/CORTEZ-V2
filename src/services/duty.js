@@ -70,23 +70,42 @@ async function findActiveShift(userId) {
   return Shift.findOne({ user: userId, status: { $in: ['active', 'paused'] } }).sort({ startAt: -1 });
 }
 
-async function ensureNightLock(user, bypass = false) {
-  if (bypass || !user) return;
+/*
+ * قفل الدوام: يمنع بدء أو استئناف الدوام خارج نافذة الدوام الليلي.
+ * يُطبَّق على الجميع بمن فيهم القيادة، إلا الرتب المكتوبة يدويًا في
+ * «رتب تتجاوز القفل» من لوحة الإدارة.
+ */
+async function nightLockState(user) {
   const settings = await settingsService.loadAll();
   const nightShift = settings['system.nightShift'] || config.system.nightShift;
-  if (!nightShift || !nightShift.enabled || !nightShift.lock) return;
-  const locked = time.inNightWindow(new Date(), config.system.timezone, nightShift);
-  if (!locked) return;
-  const { hasPermission } = require('./ranks');
-  const { getRank } = require('./ranks');
-  const rank = await getRank(user.rank);
-  if (!hasPermission(user, 'duty:night', rank)) {
-    throw httpError(
-      403,
-      `قفل الدوام الليلي مفعّل حالياً (${nightShift.start} - ${nightShift.end}). لا يمكنك تسجيل الدوام الآن.`,
-      'NIGHT_LOCK'
-    );
-  }
+  const bypassRanks = Array.isArray(settings['system.nightLockBypass'])
+    ? settings['system.nightLockBypass'].map((rank) => String(rank || '').trim()).filter(Boolean)
+    : [];
+  const windowEnabled = Boolean(nightShift && nightShift.enabled !== false);
+  const lockOn = windowEnabled && Boolean(nightShift.lock);
+  const locked = lockOn && time.inNightWindow(new Date(), config.system.timezone, nightShift);
+  const exempt = Boolean(user && bypassRanks.includes(user.rank));
+  return {
+    nightShift,
+    windowEnabled,
+    lockOn,
+    lockedNow: Boolean(locked),
+    exempt,
+    blocked: Boolean(locked && !exempt),
+    bypassRanks
+  };
+}
+
+async function ensureNightLock(user, bypass = false) {
+  if (bypass || !user) return;
+  const state = await nightLockState(user);
+  if (!state.blocked) return;
+  const { start, end } = state.nightShift || {};
+  throw httpError(
+    403,
+    `قفل الدوام شغّال الآن: الدوام مسموح فقط من ${start} إلى ${end}. لو تحتاج بدء دوام خارج النافذة أضف رتبتك في «رتب تتجاوز القفل» بلوحة الإدارة.`,
+    'NIGHT_LOCK'
+  );
 }
 
 async function startDuty(user, req = null, options = {}) {
@@ -159,6 +178,7 @@ async function pauseDuty(user) {
 
 async function resumeDuty(user) {
   if (!mongooseReady()) throw httpError(503, 'قاعدة البيانات غير متصلة حالياً', 'DB_OFFLINE');
+  await ensureNightLock(user);
   const Shift = require('../models/Shift');
   const User = require('../models/User');
   const shift = await findActiveShift(user._id);
@@ -470,5 +490,6 @@ module.exports = {
   serializeShift,
   closeStaleShifts,
   activeCount,
-  ensureNightLock
+  ensureNightLock,
+  nightLockState
 };

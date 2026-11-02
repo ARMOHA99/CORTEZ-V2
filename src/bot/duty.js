@@ -206,13 +206,8 @@ async function handleButton(interaction) {
       if (attendanceEnabled === false) {
         return interaction.editReply({ content: '⛔ تسجيل الحضور متوقف حاليًا من الإدارة.' });
       }
-      // نفس شرط الموقع: تجاوز القفل الليلي يحتاج صلاحية duty:night
-      const { getRank } = require('../services/ranks');
-      const rank = await getRank(user.rank);
-      const canBypass =
-        user.rank === 'owner' || (rank?.permissions || []).includes('duty:night');
-
-      const result = await dutyService.startDuty(user, null, { bypassLock: canBypass });
+      // نفس شرط الموقع بالضبط: القفل يطبَّق إلا على الرتب المستثناة في الإعدادات
+      const result = await dutyService.startDuty(user, null);
       if (result.alreadyActive) {
         // لا ننشئ دوامًا ثانيًا — نعرض الحالة بدل ذلك
         return interaction.editReply(statePayload(user, result.shift));
