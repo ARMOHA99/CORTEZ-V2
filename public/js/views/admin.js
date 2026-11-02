@@ -144,16 +144,16 @@ async function tabSettings(box) {
         <label>اليوم الذي يبدأ منه الأسبوع (يُصفَّر عنده الحضور والهدف)
           <select name="weekStartDay">${WEEKDAYS.map((d, i) => `<option value="${i}" ${Number(s['system.weekStartDay']) === i ? 'selected' : ''}>${d}</option>`).join('')}</select>
         </label>
-        ${sw('nightEnabled', 'تفعيل نافذة الدوام الليلي', night.enabled !== false)}
+        ${sw('nightEnabled', 'تفعيل وقت الدوام المسموح', night.enabled !== false)}
         ${sw('nightLock', 'قفل الدوام خارج النافذة', Boolean(night.lock))}
         <div class="adm-row">
-          <label style="flex:1">نافذة الدوام: من<input type="time" name="nightStart" value="${esc(night.start || '22:00')}" /></label>
-          <label style="flex:1">إلى<input type="time" name="nightEnd" value="${esc(night.end || '06:00')}" /></label>
+          <label style="flex:1">الدوام مسموح من<input type="time" name="nightStart" value="${esc(night.start || '22:00')}" /></label>
+          <label style="flex:1">إلى (اليوم التالي)<input type="time" name="nightEnd" value="${esc(night.end || '06:00')}" /></label>
         </div>
         <label>رتب تتجاوز قفل الدوام (Ctrl للاختيار المتعدد — اتركها فاضية ليطبَّق القفل على الجميع بمن فيهم القيادة)
           <select id="night-bypass" multiple size="5">${attRanks.map((r) => `<option value="${esc(r.key)}" ${lockBypass.includes(r.key) ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
         </label>
-        <p class="adm-note">قفل الدوام يمنع <strong>بدء واستئناف</strong> الشفت خارج النافذة، ويسمح دائمًا بإنهاء الدوام. هذه النافذة تخص الدوام فقط؛ حساب يوم الحضور والتقييم في بطاقة «الحضور والإنذارات» أسفل — أو خلّها مزامنة وتتبع هذه النافذة تلقائيًا.</p>
+        <p class="adm-note">النافذة معناه: الدوام مسموح <strong>داخلها فقط</strong>. القفل يمنع <strong>بدء واستئناف</strong> الشفت قبل بدايتها أو بعد نهايتها، ويسمح دائمًا بإنهاء الدوام. هذه النافذة تخص الدوام فقط؛ حساب يوم الحضور والتقييم في بطاقة «الحضور والإنذارات» أسفل — أو خلّها مزامنة وتتبع هذه النافذة تلقائيًا.</p>
         <label>إغلاق الدوام تلقائيًا بعد (ساعات، 0 = معطّل)<input type="number" name="autoClose" min="0" max="72" value="${Number(s['system.autoCloseDutyHours']) || 0}" /></label>
       </div></div>
 

@@ -76,7 +76,7 @@ export async function render(root) {
           ${members.length ? `<tfoot><tr><td><strong>الحاضرون</strong></td>${perDay.map((n, i) => `<td class="cell ${days[i] === today ? 'today-col' : ''}"><strong>${n}</strong></td>`).join('')}<td></td><td></td></tr></tfoot>` : ''}
         </table>
       </div></div>
-      <p class="adm-note" style="margin-top:10px">✓ حضر • ✗ لم يحضر • … اليوم لم ينتهِ بعد • · يوم قادم. يوم الدوام يتبع نافذة الدوام الليلي، لا منتصف الليل.</p>`;
+      <p class="adm-note" style="margin-top:10px">✓ حضر • ✗ لم يحضر • … اليوم لم ينتهِ بعد • · يوم قادم. يوم الدوام يتبع حدود وقت الدوام المسموح، لا منتصف الليل.</p>`;
 
     const go = (key) => { weekOverride = key; render(root); };
     root.querySelector('#att-prev').addEventListener('click', () => go(shiftWeek(data.weekKey, -7)));

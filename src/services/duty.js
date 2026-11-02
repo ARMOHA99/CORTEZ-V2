@@ -83,12 +83,15 @@ async function nightLockState(user) {
     : [];
   const windowEnabled = Boolean(nightShift && nightShift.enabled !== false);
   const lockOn = windowEnabled && Boolean(nightShift.lock);
-  const locked = lockOn && time.inNightWindow(new Date(), config.system.timezone, nightShift);
+  /* النافذة = الفترة المسموح فيها الدوام، والقفل يمنع ما هو خارجها */
+  const insideWindow = windowEnabled && time.inNightWindow(new Date(), config.system.timezone, nightShift);
+  const locked = lockOn && !insideWindow;
   const exempt = Boolean(user && bypassRanks.includes(user.rank));
   return {
     nightShift,
     windowEnabled,
     lockOn,
+    insideWindow: Boolean(insideWindow),
     lockedNow: Boolean(locked),
     exempt,
     blocked: Boolean(locked && !exempt),

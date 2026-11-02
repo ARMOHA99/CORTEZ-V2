@@ -32,7 +32,9 @@ router.get(
 
     const nightState = {
       ...context.nightShift,
-      lockedNow: time.inNightWindow(new Date(), config.system.timezone, context.nightShift),
+      lockedNow: Boolean(context.nightShift && context.nightShift.lock) &&
+        !time.inNightWindow(new Date(), config.system.timezone, context.nightShift),
+      insideWindow: time.inNightWindow(new Date(), config.system.timezone, context.nightShift),
       dayStartHour: context.dayStartHour
     };
 

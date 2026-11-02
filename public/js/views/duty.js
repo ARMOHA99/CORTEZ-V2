@@ -117,7 +117,7 @@ export async function render(root) {
           <div class="card-body stack">
             <div class="kv"><span>بداية الأسبوع</span><strong>${esc(summary.weekKey)}</strong></div>
             <div class="kv"><span>اليوم الحالي</span><strong>${esc(summary.dateKey)}</strong></div>
-            <div class="kv"><span>نافذة الدوام الليلي</span><strong>${esc(night.start || '22:00')} - ${esc(night.end || '06:00')}</strong></div>
+            <div class="kv"><span>وقت الدوام المسموح</span><strong>${esc(night.start || '22:00')} - ${esc(night.end || '06:00')}</strong></div>
           </div>
         </div>
       </div>
