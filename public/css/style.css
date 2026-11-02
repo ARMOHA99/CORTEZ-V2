@@ -4254,3 +4254,5 @@ p {
 /* أزرار أسفل بطاقة المنتج (تفاصيل + إضافة) */
 .product-foot .foot-actions { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .product-foot .foot-actions .btn { white-space: nowrap; }
+
+/* لوحة الألوان: أسود وأخضر */
