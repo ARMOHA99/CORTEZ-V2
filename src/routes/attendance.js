@@ -126,6 +126,29 @@ router.post(
   })
 );
 
+/* حذف سجلات يوم كامل (إعادة تقييم نظيفة) */
+router.post(
+  '/reset',
+  requireAuth,
+  requirePermission('attendance:manage'),
+  asyncHandler(async (req, res) => {
+    if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    const key = String((req.body || {}).dateKey || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) throw httpError(400, 'صيغة التاريخ غير صحيحة', 'BAD_DATE');
+    const AttendanceDay = require('../models/AttendanceDay');
+    const result = await AttendanceDay.deleteMany({ dateKey: key });
+    await audit.log({
+      actor: req.user,
+      action: 'attendance.reset',
+      description: `حذف سجلات الحضور ليوم ${key}`,
+      targetType: 'attendance',
+      targetId: key,
+      req
+    }).catch(() => null);
+    res.json({ ok: true, deleted: result.deletedCount || 0 });
+  })
+);
+
 /* كل الإنذارات (الإدارة) */
 router.get(
   '/warnings',

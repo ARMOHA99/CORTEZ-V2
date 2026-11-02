@@ -19,6 +19,7 @@ function defaultSettings() {
     'organization.name': 'CORTEZ',
     'organization.logoUrl': '',
     'attendance.enabled': true,
+    'attendance.startedAt': '',
     /* الحضور والإنذارات: نافذة اليوم، الحد الأدنى للدوام، التصعيد، والتبرير */
     'attendance.minMinutes': 30,
     'attendance.absentLimit': 3,

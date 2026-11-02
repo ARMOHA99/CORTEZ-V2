@@ -428,14 +428,30 @@ async function evaluateDate(dateKey, { force = false } = {}) {
   return { ok: true, dateKey: key, present: presentees.length, absent: absentees.length, created, warnings: severity.length, window: { start: win.start, end: win.end } };
 }
 
+/*
+ * بداية التشغيل: أول مرة يعمل فيها النظام لا نحاسب أحدًا على أيام سابقة،
+ * ونمسح أي سجلات تلقائية أُنشئت بأثر رجعي قبل التفعيل.
+ */
+async function ensureStarted(c) {
+  const marker = String((await settingsService.get('attendance.startedAt', '')) || '').trim();
+  if (marker) return marker;
+  const today = dateKeyNow(new Date(), c);
+  await settingsService.setMany({ 'attendance.startedAt': today }, null);
+  const AttendanceDay = require('../models/AttendanceDay');
+  await AttendanceDay.deleteMany({ dateKey: { $lt: today }, source: 'auto', 'justification.status': { $ne: 'pending' } }).catch(() => null);
+  return today;
+}
+
 /** يقيّم الأيام المستحقة (اليوم + تعويض آخر ٣ أيام لو كان البوت مطفأ) */
 async function runDue() {
   const c = await cfg();
   if (!c.enabled || !mongooseReady()) return { ok: false, reason: 'disabled' };
+  const startedAt = await ensureStarted(c);
   const today = dateKeyNow(new Date(), c);
   const results = [];
   for (let i = 0; i < 4; i += 1) {
     const key = time.addDaysToKey(today, -i);
+    if (startedAt && key < startedAt) break;
     const result = await evaluateDate(key).catch((error) => ({ ok: false, reason: error.message }));
     results.push(result);
     if (result.ok && result.created > 0) break;
@@ -704,6 +720,7 @@ async function warningsList(filter = {}) {
 
 module.exports = {
   cfg,
+  ensureStarted,
   dateKeyNow,
   windowFor,
   evaluateDate,
