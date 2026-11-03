@@ -190,12 +190,11 @@ function startBot() {
       }
     });
 
+    /* لا يُمنح أي رول تلقائيًا عند الدخول — الرتبة تُمنح يدويًا من القيادة فقط */
     client.on(Events.GuildMemberAdd, async (member) => {
       try {
         if (config.discord.guildId && member.guild.id !== config.discord.guildId) return;
-        if (config.discord.roles.member) {
-          await member.roles.add(config.discord.roles.member, 'CORTEZ Welcome').catch(() => null);
-        }
+        console.log(`[Bot] عضو جديد بلا رتبة: ${member.user?.username || member.id} — بانتظار منح الرتبة يدويًا`);
         await discordService.sendChannel('announcements', {
           content: `🩸 <@${member.id}> انضم إلى عائلة ${config.org.name}. وقّع عقد الدم لتثبت ولاءك.`,
           allowedMentions: { users: [member.id] }
