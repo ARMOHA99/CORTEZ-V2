@@ -197,6 +197,7 @@ async function tabSettings(box) {
         <h4 class="adm-sec">٤) غرف ديسكورد — كل غرفة لحالها</h4>
         <div class="adm-row">
           <label style="flex:1">غرفة التنبيهات (تبرير جديد، أشياء تحتاج مراجعة)<input type="text" id="att-notify-channel" value="${esc(s['attendance.notifyChannelId'] || s['attendance.channelId'] || '')}" placeholder="1531406984748994651" /></label>
+          ${sw('attDailyNotes', 'ملاحظة يومية لكل غائب في غرفة الملاحظات (مع تاغ)', s['attendance.dailyNotes'] !== false)}
           <label style="flex:1">غرفة الإنذارات (رسائل الوارن الرسمية)<input type="text" id="att-warn-channel" value="${esc(s['attendance.warnChannelId'] || '')}" placeholder="1566619337241006192" /></label>
           <label style="flex:1">غرفة سجل الحضور اليومي (تقرير الإغلاق)<input type="text" id="att-log" value="${esc(s['attendance.logChannelId'] || '')}" placeholder="اذا تركتها فاضية ما ينشر تقرير" /></label>
         </div>
@@ -479,6 +480,7 @@ async function tabSettings(box) {
           'attendance.syncNightWindow': Boolean(box.querySelector('[name="attSyncNight"]').checked),
           'attendance.notifyChannelId': val('att-notify-channel').trim(),
           'attendance.warnChannelId': val('att-warn-channel').trim(),
+          'attendance.dailyNotes': Boolean(box.querySelector('[name="attDailyNotes"]')?.checked),
           'attendance.logChannelId': val('att-log').trim(),
           'attendance.channelId': val('att-notify-channel').trim(),
           'attendance.warnRoles': [0, 1, 2].map((i) => val('att-role-' + i).trim()),

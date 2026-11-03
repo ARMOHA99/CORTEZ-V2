@@ -37,6 +37,7 @@ function defaultSettings() {
     'attendance.graceDays': 0,
     'attendance.notifySelf': true,
     'attendance.dailySummary': true,
+    'attendance.dailyNotes': true,
     'attendance.template': '',
     'access.requireDiscordRole': true,
     'discord.inviteUrl': '',

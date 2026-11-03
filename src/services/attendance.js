@@ -30,6 +30,7 @@ const DEFAULTS = {
   graceDays: 0,
   notifySelf: true,
   dailySummary: true,
+  dailyNotes: true,
   template: ''
 };
 
@@ -84,6 +85,7 @@ async function cfg() {
     graceDays: num(s['attendance.graceDays'], DEFAULTS.graceDays, 0, 60),
     notifySelf: s['attendance.notifySelf'] !== false,
     dailySummary: s['attendance.dailySummary'] !== false,
+    dailyNotes: s['attendance.dailyNotes'] !== false,
     template: typeof s['attendance.template'] === 'string' ? s['attendance.template'] : ''
   };
 
@@ -431,7 +433,42 @@ async function evaluateDate(dateKey, { force = false } = {}) {
     }
   }
 
-  console.log(`[Attendance] تقييم ${key}: حاضر ${presentees.length}، غائب ${absentees.length}، إنذارات ${severity.length} (حد الغياب ${c.absentLimit}، غرفة الإنذارات ${c.warnChannelId || c.notifyChannelId ? 'مضبوطة' : 'غير مضبوطة'}، رولات ${c.warnRoles.filter(Boolean).length})`);
+  /* ملاحظة يومية لكل غائب في غرفة الملاحظات مع تاغ — مرة واحدة لكل يوم */
+  let noted = 0;
+  if (c.dailyNotes && c.notifyChannelId && absentees.length) {
+    const todayKey = dateKeyNow(new Date(), c);
+    const allowed = new Set([todayKey, time.addDaysToKey(todayKey, -1)]);
+    if (allowed.has(key)) {
+      for (const entry of absentees) {
+        const doc = entry.day || (await AttendanceDay.findOne({ user: entry.user._id, dateKey: key }));
+        if (!doc || doc.notifiedAt) continue;
+        const did = String(entry.user.discordId || '');
+        const mention = did ? `<@${did}>` : displayName(entry.user);
+        const embed = discord.embed(
+          'ملاحظة غياب',
+          `لم يُسجَّل حضورك يوم ${key}. قدّم تبريرك خلال ${c.justifyHours} ساعة من إغلاق اليوم، وإلا يُحسب غيابًا في سجلك.`,
+          0xf59e0b,
+          [
+            { name: 'العضو', value: displayName(entry.user), inline: true },
+            { name: 'الرتبة', value: entry.user.rank || '—', inline: true },
+            { name: 'اليوم', value: key, inline: true },
+            { name: 'الغياب المتتالي', value: String(doc.streak || 1), inline: true }
+          ]
+        );
+        const sent = await sendChannel(c.notifyChannelId, {
+          content: `${mention} لديك ملاحظة غياب — ${key}`,
+          embeds: [embed],
+          allowedMentions: { users: did ? [did] : [] }
+        });
+        if (sent) {
+          await AttendanceDay.updateOne({ _id: doc._id }, { $set: { notifiedAt: new Date() } }).catch(() => null);
+          noted += 1;
+        }
+      }
+    }
+  }
+
+  console.log(`[Attendance] تقييم ${key}: حاضر ${presentees.length}، غائب ${absentees.length}، إنذارات ${severity.length}، ملاحظات ${noted} (حد الغياب ${c.absentLimit}، غرفة الإنذارات ${c.warnChannelId || c.notifyChannelId ? 'مضبوطة' : 'غير مضبوطة'}، رولات ${c.warnRoles.filter(Boolean).length})`);
 
   if (created > 0 && c.dailySummary && c.logChannelId) {
     const lines = [
