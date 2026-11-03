@@ -423,10 +423,15 @@ async function evaluateDate(dateKey, { force = false } = {}) {
           console.error('[Attendance] تعذّر إصدار الإنذار:', error.message);
           return null;
         });
-        if (warning) severity.push({ name: displayName(entry.user), level: warning.level, streak });
+        if (warning) {
+          severity.push({ name: displayName(entry.user), level: warning.level, streak });
+          console.log(`[Attendance] إنذار ${displayName(entry.user)} مستوى ${warning.level} (غياب ${streak}) — ${key}`);
+        }
       }
     }
   }
+
+  console.log(`[Attendance] تقييم ${key}: حاضر ${presentees.length}، غائب ${absentees.length}، إنذارات ${severity.length} (حد الغياب ${c.absentLimit}، غرفة الإنذارات ${c.warnChannelId || c.notifyChannelId ? 'مضبوطة' : 'غير مضبوطة'}، رولات ${c.warnRoles.filter(Boolean).length})`);
 
   if (created > 0 && c.dailySummary && c.logChannelId) {
     const lines = [

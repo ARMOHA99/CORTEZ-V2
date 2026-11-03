@@ -149,6 +149,67 @@ router.post(
   })
 );
 
+/* تشخيص نظام الحضور: يوضّح سبب عدم إصدار إنذارات */
+router.get(
+  '/diagnose',
+  requireAuth,
+  requirePermission('attendance:manage'),
+  asyncHandler(async (req, res) => {
+    if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    const AttendanceDay = require('../models/AttendanceDay');
+    const Warning = require('../models/Warning');
+    const User = require('../models/User');
+    const c = await attendance.cfg();
+    const today = attendance.dateKeyNow(new Date(), c);
+    const days = await AttendanceDay.find({ dateKey: { $lte: today } })
+      .sort({ dateKey: -1 })
+      .limit(500)
+      .select('dateKey status streak user userSnapshot')
+      .lean();
+    const byDay = {};
+    for (const day of days) {
+      byDay[day.dateKey] = byDay[day.dateKey] || { dateKey: day.dateKey, present: 0, absent: 0, other: 0 };
+      if (day.status === 'present') byDay[day.dateKey].present += 1;
+      else if (day.status === 'absent') byDay[day.dateKey].absent += 1;
+      else byDay[day.dateKey].other += 1;
+    }
+    const latest = Object.values(byDay).sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1))[0] || null;
+    const absentees = latest
+      ? days.filter((d) => d.dateKey === latest.dateKey && d.status === 'absent').map((d) => ({
+        name: d.userSnapshot?.name || d.userSnapshot?.displayName || String(d.user),
+        streak: d.streak || 0,
+        reachedLimit: (d.streak || 0) >= c.absentLimit
+      }))
+      : [];
+    const [warnTotal, warnActive, members] = await Promise.all([
+      Warning.countDocuments({}),
+      Warning.countDocuments({ status: 'active' }),
+      User.countDocuments({ inGuild: true, blocked: false })
+    ]);
+    res.json({
+      today,
+      settings: {
+        enabled: c.enabled,
+        dayStart: c.dayStart,
+        closeTime: c.closeTime,
+        minMinutes: c.minMinutes,
+        absentLimit: c.absentLimit,
+        justifyHours: c.justifyHours,
+        warnDays: c.warnDays,
+        graceDays: c.graceDays,
+        dailySummary: c.dailySummary,
+        channels: { notify: Boolean(c.notifyChannelId), warn: Boolean(c.warnChannelId), log: Boolean(c.logChannelId) },
+        warnRolesConfigured: c.warnRoles.filter(Boolean).length,
+        exemptRanks: c.exemptRanks
+      },
+      members,
+      warnings: { total: warnTotal, active: warnActive },
+      lastEvaluatedDay: latest,
+      absenteesOfLastDay: absentees.slice(0, 40)
+    });
+  })
+);
+
 /* كل الإنذارات (الإدارة) */
 router.get(
   '/warnings',
