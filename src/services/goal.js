@@ -52,7 +52,14 @@ async function getCurrentGoal(options = {}) {
     const target = Number(
       previous ? previous.target : context.settings['system.weeklyGoalTarget'] || config.system.weeklyGoalTarget
     );
-    goal = await Goal.create({ weekKey: context.weekKey, target, earned: 0, lost: 0, current: 0 });
+    goal = await Goal.create({
+      weekKey: context.weekKey,
+      target,
+      earned: 0,
+      lost: 0,
+      current: 0,
+      prizes: previous && previous.prizes && previous.prizes.length ? previous.prizes : []
+    });
   }
   if (!goal && !create) goal = await ensureGoal(context.weekKey, context.settings['system.weeklyGoalTarget']);
   return { goal, context };
@@ -71,10 +78,119 @@ function serializeGoal(goal, context) {
     remaining,
     percent: target > 0 ? Math.min(100, Math.round((current / target) * 1000) / 10) : 0,
     history: (goal.history || []).slice(-25).reverse(),
+    prizes: (goal.prizes || []).slice(0, 3).map((prize) => ({
+      rank: Number(prize.rank) || 0,
+      name: prize.name || '',
+      imageUrl: prize.imageUrl || '',
+      type: prize.type || '',
+      amount: Number(prize.amount) || 0
+    })),
+    winners: (goal.winners || []).slice(0, 3).map((winner) => ({
+      rank: Number(winner.rank) || 0,
+      name: winner.name || '',
+      awardedAt: winner.awardedAt || null
+    })),
+    rewardsAwardedAt: goal.rewardsAwardedAt || null,
     nextWeek: context ? time.nextWeekStart(goal.weekKey, context.weekStartDay, context.timezone) : null,
     weekStartDay: context ? context.weekStartDay : config.system.weekStartDay,
     weekEnd: goal.weekKey ? time.addDaysToKey(goal.weekKey, 6) : null
   };
+}
+
+/* ترتيب/تنظيف الهدايا الثلاث */
+function cleanPrizes(prizes) {
+  const list = Array.isArray(prizes) ? prizes : [];
+  return [1, 2, 3].map((rank) => {
+    const row = list[rank - 1] || {};
+    return {
+      rank,
+      name: String(row.name || '').slice(0, 120),
+      imageUrl: String(row.imageUrl || '').slice(0, 500),
+      type: String(row.type || '').slice(0, 60),
+      amount: Math.max(0, Math.round(Number(row.amount) || 0))
+    };
+  });
+}
+
+async function setPrizes(prizes, user) {
+  if (!mongooseReady()) return null;
+  const { goal, context } = await getCurrentGoal({ create: true });
+  goal.prizes = cleanPrizes(prizes);
+  goal.updatedBy = user ? user._id : null;
+  await goal.save();
+  const payload = serializeGoal(goal, context);
+  realtime.emit('goal:update', payload);
+  realtime.emit('dashboard:refresh', { reason: 'goal-prizes' });
+  return payload;
+}
+
+/* عند بلوغ الهدف: تُمنح الهدايا لأول ثلاثة في لوحة الشرف مرة واحدة لكل أسبوع */
+async function awardIfReached(goal, context) {
+  if (!goal) return null;
+  if (!(Number(goal.target) > 0)) return null;
+  if (Number(goal.current) < Number(goal.target)) return null;
+  if (goal.rewardsAwardedAt) return null;
+  const prizes = (goal.prizes || []).filter((prize) => prize && prize.name);
+  if (!prizes.length) return null;
+
+  const leaderboard = require('./leaderboard');
+  const notifyService = require('./notify');
+  const discordService = require('./discord');
+  const audit = require('./audit');
+
+  const board = await leaderboard.build({ limit: 3, weekKey: goal.weekKey }).catch(() => null);
+  const top = (board && board.items ? board.items : []).slice(0, 3);
+  if (!top.length) return null;
+
+  goal.winners = top.map((row, index) => ({
+    rank: index + 1,
+    userId: row._id || null,
+    name: row.name || 'عضو',
+    awardedAt: new Date()
+  }));
+  goal.rewardsAwardedAt = new Date();
+  await goal.save();
+
+  for (let index = 0; index < top.length; index += 1) {
+    const winner = top[index];
+    const prize = prizes[index] || prizes[prizes.length - 1];
+    const body = `${prize.name}${prize.type ? ' — ' + prize.type : ''}${prize.amount ? ' بقيمة ' + prize.amount : ''}`;
+    if (winner._id) {
+      await notifyService
+        .push(winner._id, {
+          title: `هدية المركز ${index + 1} في الهدف الأسبوعي`,
+          body,
+          type: 'success',
+          link: '/#/leaderboard'
+        })
+        .catch(() => null);
+    }
+  }
+
+  const lines = top
+    .map((row, index) => {
+      const prize = prizes[index] || prizes[prizes.length - 1];
+      return `**${index + 1}.** ${row.name} — ${prize.name}${prize.amount ? ' (' + prize.amount + ')' : ''}`;
+    })
+    .join('\n');
+  await discordService
+    .sendChannel(require('../../config').discord.channels.announcements, {
+      content: `🏆 تم بلوغ الهدف الأسبوعي (${goal.weekKey}). الهدايا لأول ثلاثة:\n${lines}`
+    })
+    .catch(() => null);
+
+  await audit
+    .log({
+      action: 'goal.rewards',
+      description: `منح هدايا الهدف الأسبوعي ${goal.weekKey} لأول ثلاثة`,
+      targetType: 'goal',
+      targetId: goal.weekKey,
+      meta: { winners: goal.winners.map((winner) => ({ rank: winner.rank, name: winner.name })) }
+    })
+    .catch(() => null);
+
+  realtime.emit('goal:update', serializeGoal(goal, context));
+  return goal.winners;
 }
 
 async function addToGoal(amount, { reason = '', refType = '', refId = null, user = null } = {}) {
@@ -100,6 +216,7 @@ async function addToGoal(amount, { reason = '', refType = '', refId = null, user
   if (user) goal.updatedBy = user._id;
   await goal.save();
 
+  await awardIfReached(goal, context).catch(() => null);
   const payload = serializeGoal(goal, context);
   realtime.emit('goal:update', payload);
   realtime.emit('dashboard:refresh', { reason: 'goal' });
@@ -143,6 +260,9 @@ module.exports = {
   getCurrentGoal,
   serializeGoal,
   addToGoal,
+  setPrizes,
+  awardIfReached,
+  cleanPrizes,
   setTarget,
   adjustCurrent,
   rolloverIfNeeded,

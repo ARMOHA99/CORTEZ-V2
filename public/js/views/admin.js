@@ -212,11 +212,28 @@ async function tabSettings(box) {
           <input class="adm-input" type="number" id="goal-amount" placeholder="مبلغ التعديل (+ أو −)" style="flex:1" />
           <input class="adm-input" type="text" id="goal-reason" placeholder="السبب" style="flex:1" />
         </div>
+        <h4 style="margin:16px 0 6px">هدايا الهدف (لأول ثلاثة في لوحة الشرف)</h4>
+        <div id="goal-prizes">${[1, 2, 3].map((rank) => `
+          <div class="adm-prize" data-rank="${rank}">
+            <strong>المركز ${rank === 1 ? 'الأول' : rank === 2 ? 'الثاني' : 'الثالث'}</strong>
+            <div class="adm-row" style="flex-wrap:wrap">
+              <label style="flex:2;min-width:180px">اسم الهدية<input type="text" name="prizeName${rank}" placeholder="مثال: سلاح فاخر" /></label>
+              <label style="flex:2;min-width:180px">نوع الآيتم<input type="text" name="prizeType${rank}" placeholder="سلاح / مواد / عتاد / مركبة" /></label>
+              <label style="flex:1;min-width:110px">المبلغ<input type="number" name="prizeAmount${rank}" min="0" placeholder="0" /></label>
+              <label style="flex:3;min-width:220px">رابط الصورة<input type="url" name="prizeImage${rank}" placeholder="https://…jpg" /></label>
+            </div>
+            <div class="adm-row" style="align-items:center;gap:8px">
+              <img class="adm-prize-img" id="prize-prev-${rank}" alt="" />
+              <span class="muted" style="font-size:12px" id="prize-hint-${rank}"></span>
+            </div>
+          </div>`).join('')}
+        </div>
         <div class="adm-actions">
+          <button class="btn btn-primary btn-sm" type="button" id="goal-save">حفظ الهدف والهدايا</button>
           <button class="btn btn-ghost btn-sm" type="button" id="goal-adjust">تعديل إنجاز الأسبوع</button>
           <button class="btn btn-ghost btn-sm" type="button" id="goal-reset">تدوير / تصفير الأسبوع</button>
         </div>
-        <p class="adm-note">«تعديل إنجاز الأسبوع» يضيف المبلغ أو يخصمه من الشريط الحالي. «تدوير الأسبوع» يقفل الأسبوع الحالي ويبدأ أسبوعًا جديدًا.</p>
+        <p class="adm-note">عند بلوغ الهدف الأسبوعي تُمنح الهدايا تلقائيًا لأول ثلاثة في لوحة الشرف مرة واحدة لكل أسبوع، مع إشعار لكل فائز ورسالة في قناة الإعلانات. «تعديل إنجاز الأسبوع» يضيف المبلغ أو يخصمه. «تدوير الأسبوع» يقفل الأسبوع ويبدأ جديدًا.</p>
       </div></div>
 
       <div class="card"><div class="card-body adm-form">
@@ -274,6 +291,57 @@ async function tabSettings(box) {
       toast(res.note || 'تم رفع الشعار، اضغط «حفظ الإعدادات» لتثبيته', res.note ? 'warning' : 'success');
     } catch (e) { toast(e.message, 'danger'); }
   });
+
+  /* الهدايا: تحميل المحفوظ + معاينة الصور + الحفظ */
+  const prizeBox = box.querySelector('#goal-prizes');
+  const readPrizes = () => [1, 2, 3].map((rank) => ({
+    rank,
+    name: (box.querySelector(`[name="prizeName${rank}"]`)?.value || '').trim(),
+    type: (box.querySelector(`[name="prizeType${rank}"]`)?.value || '').trim(),
+    amount: Number(box.querySelector(`[name="prizeAmount${rank}"]`)?.value) || 0,
+    imageUrl: (box.querySelector(`[name="prizeImage${rank}"]`)?.value || '').trim()
+  }));
+  const paintPrize = (rank) => {
+    const img = box.querySelector(`#prize-prev-${rank}`);
+    const hint = box.querySelector(`#prize-hint-${rank}`);
+    const url = (box.querySelector(`[name="prizeImage${rank}"]`)?.value || '').trim();
+    if (img) {
+      if (url) { img.src = url; img.style.display = 'block'; } else { img.removeAttribute('src'); img.style.display = 'none'; }
+    }
+    if (hint) hint.textContent = url ? '' : 'بدون صورة';
+  };
+  if (prizeBox) {
+    try {
+      const data = await get('/api/admin/goal');
+      const prizes = (data.goal && data.goal.prizes) || [];
+      for (const prize of prizes) {
+        const rank = Number(prize.rank) || 0;
+        if (!rank) continue;
+        const set = (name, value) => { const el = box.querySelector(`[name="${name}${rank}"]`); if (el) el.value = value == null ? '' : value; };
+        set('prizeName', prize.name);
+        set('prizeType', prize.type);
+        set('prizeAmount', prize.amount ? prize.amount : '');
+        set('prizeImage', prize.imageUrl);
+        paintPrize(rank);
+      }
+    } catch (error) { /* لا شي */ }
+    [1, 2, 3].forEach((rank) => {
+      const input = box.querySelector(`[name="prizeImage${rank}"]`);
+      if (input) input.addEventListener('input', () => paintPrize(rank));
+    });
+  }
+  const goalSave = box.querySelector('#goal-save');
+  if (goalSave) {
+    goalSave.addEventListener('click', async () => {
+      const raw = (box.querySelector('[name="goalTarget"]').value || '').trim();
+      const payload = { prizes: readPrizes() };
+      if (raw !== '') payload.target = Number(raw) || 0;
+      try {
+        await patch('/api/admin/goal', payload);
+        toast('تم حفظ الهدف والهدايا', 'success');
+      } catch (error) { toast(error.message, 'danger'); }
+    });
+  }
 
   box.querySelector('#goal-adjust').addEventListener('click', async () => {
     const amount = Number(box.querySelector('#goal-amount').value);

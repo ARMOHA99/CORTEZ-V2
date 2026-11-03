@@ -188,7 +188,7 @@ function normalizeMember(member) {
   return {
     inGuild: true,
     roles: roleIds,
-    nick: member.nick || null,
+    nick: member.nick || null, /* لقب السيرفر — للعرض الداخلي فقط، لا يُستخدم كاسم في الموقع */
     joinedAt: member.joined_at || member.joinedAt || null,
     user: {
       id: String(user.id),

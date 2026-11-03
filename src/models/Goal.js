@@ -12,6 +12,28 @@ const goalHistorySchema = new mongoose.Schema(
   { _id: false }
 );
 
+/* هدية أسبوعية: صورة + نوع + مبلغ */
+const prizeSchema = new mongoose.Schema(
+  {
+    rank: { type: Number, default: 0 },
+    name: { type: String, default: '', maxlength: 120 },
+    imageUrl: { type: String, default: '', maxlength: 500 },
+    type: { type: String, default: 'عتاد', maxlength: 60 },
+    amount: { type: Number, default: 0, min: 0 }
+  },
+  { _id: false }
+);
+
+const winnerSchema = new mongoose.Schema(
+  {
+    rank: { type: Number, default: 0 },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    name: { type: String, default: '' },
+    awardedAt: { type: Date, default: Date.now }
+  },
+  { _id: false }
+);
+
 const goalSchema = new mongoose.Schema(
   {
     weekKey: { type: String, required: true, unique: true, index: true },
@@ -20,6 +42,9 @@ const goalSchema = new mongoose.Schema(
     lost: { type: Number, default: 0, min: 0 },
     current: { type: Number, default: 0, min: 0 },
     history: { type: [goalHistorySchema], default: [] },
+    prizes: { type: [prizeSchema], default: [] },
+    winners: { type: [winnerSchema], default: [] },
+    rewardsAwardedAt: { type: Date, default: null },
     closedAt: { type: Date, default: null },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
   },

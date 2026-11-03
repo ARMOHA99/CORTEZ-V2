@@ -135,8 +135,8 @@ router.get(
       return res.redirect('/?error=no_role&seen=' + (member ? (member.roles || []).length : 'x'));
     }
 
+    /* اسم حساب ديسكورد (لا لقب السيرفر) — أسماء السيرفر تتغير ولا نريدها تظهر في الموقع */
     const displayName =
-      (member && member.nick) ||
       oauthUser.global_name ||
       oauthUser.username ||
       (existing && existing.displayName) ||

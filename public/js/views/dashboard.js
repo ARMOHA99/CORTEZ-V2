@@ -4,6 +4,28 @@ import { esc, money, num, hours, timeAgo, avatar, userCell, statusBadge, kpi, pr
 
 export const meta = { title: 'داشبورد', kicker: 'CORTEZ' };
 
+/* شريط هدايا الهدف: صورة + نوع + مبلغ، وتُظهر الفائز عند بلوغ الهدف */
+function prizeStrip(goal) {
+  const prizes = (goal.prizes || []).filter((prize) => prize && prize.name);
+  if (!prizes.length) return '';
+  const winners = goal.winners || [];
+  const winnerOf = (rank) => (winners.find((row) => Number(row.rank) === Number(rank)) || {}).name || '';
+  const labels = { 1: 'الأول', 2: 'الثاني', 3: 'الثالث' };
+  return `
+    <div class="goal-prizes">
+      ${prizes.map((prize) => `
+        <div class="goal-prize${winnerOf(prize.rank) ? ' is-won' : ''}">
+          <div class="gp-media">${prize.imageUrl ? `<img src="${esc(prize.imageUrl)}" alt="${esc(prize.name)}" loading="lazy" />` : '<span class="gp-ph">🎁</span>'}</div>
+          <div class="gp-body">
+            <span class="gp-rank">المركز ${labels[prize.rank] || prize.rank}</span>
+            <strong class="gp-name">${esc(prize.name)}</strong>
+            <span class="gp-meta">${esc(prize.type || 'هدية')}${prize.amount ? ' • ' + num(prize.amount) : ''}</span>
+            ${winnerOf(prize.rank) ? `<span class="gp-win">🏆 ${esc(winnerOf(prize.rank))}</span>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
 export async function render(root) {
   root.innerHTML = '<div class="view-loading"><div class="loader-ring"></div></div>';
   try {
@@ -49,6 +71,7 @@ export async function render(root) {
               <span class="muted">متبقي: ${num(goal.remaining)} ${esc(state.config?.system?.currencyLabel || 'دولار')}</span>
               <span class="muted">${goal.percent}%</span>
             </div>
+            ${prizeStrip(goal)}
           </div>
         </div>
         <div class="card">

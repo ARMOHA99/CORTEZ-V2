@@ -415,19 +415,35 @@ router.post(
   })
 );
 
+router.get(
+  '/goal',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const [{ goal }, context] = await Promise.all([
+      goalService.getCurrentGoal({ create: true }),
+      goalService.weekContext()
+    ]);
+    res.json({ goal: goalService.serializeGoal(goal, context) });
+  })
+);
+
 router.patch(
   '/goal',
   requireAuth,
   requirePermission('settings:manage'),
   asyncHandler(async (req, res) => {
-    const target = req.body ? req.body.target : null;
-    if (target === undefined || target === null) throw httpError(400, 'الهدف مطلوب', 'TARGET_REQUIRED');
-    const goal = await goalService.setTarget(target, req.user);
-    await settingsService.set('system.weeklyGoalTarget', Math.max(0, Number(target) || 0), req.user);
+    const body = req.body || {};
+    const hasTarget = body.target !== undefined && body.target !== null && body.target !== '';
+    const hasPrizes = Array.isArray(body.prizes);
+    if (!hasTarget && !hasPrizes) throw httpError(400, 'الهدف مطلوب', 'TARGET_REQUIRED');
+    if (hasPrizes) await goalService.setPrizes(body.prizes, req.user);
+    const goal = hasTarget ? await goalService.setTarget(body.target, req.user) : (await goalService.getCurrentGoal({ create: true })).goal;
+    if (hasTarget) await settingsService.set('system.weeklyGoalTarget', Math.max(0, Number(body.target) || 0), req.user);
     await audit.log({
       actor: req.user,
       action: 'goal.set',
-      description: `تحديد الهدف الأسبوعي بـ ${target}`,
+      description: hasTarget ? `تحديد الهدف الأسبوعي بـ ${body.target}` : 'تحديث هدايا الهدف الأسبوعي',
       targetType: 'goal',
       targetId: goal ? goal.weekKey : '',
       req

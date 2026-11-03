@@ -68,7 +68,8 @@ async function syncUser(user, options = {}) {
   }
 
   const computedRank = await resolveRank(user, member);
-  const displayName = member.nick || member.user.globalName || member.user.username || user.username;
+  /* اسم الحساب في ديسكورد فقط — لقب السيرفر (nick) لا يُستخدم */
+  const displayName = member.user.globalName || member.user.username || user.username || user.displayName;
   const update = {
     roles: member.roles || [],
     inGuild: true,
