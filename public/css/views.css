@@ -771,3 +771,10 @@
 @media (max-width: 640px) {
   .goal-prizes { grid-template-columns: 1fr; }
 }
+
+/* محرر هدايا الهدف: عنوان الحقل وزر رفع الصورة من الجهاز */
+.adm-label { display: block; font-size: 13px; color: #b9b1b5; margin-bottom: 6px; }
+.adm-prize .adm-row .btn { white-space: nowrap; }
+@media (max-width: 560px) {
+  .adm-prize .adm-row > div { flex: 1 1 100% !important; min-width: 0 !important; }
+}

@@ -220,7 +220,14 @@ async function tabSettings(box) {
               <label style="flex:2;min-width:180px">اسم الهدية<input type="text" name="prizeName${rank}" placeholder="مثال: سلاح فاخر" /></label>
               <label style="flex:2;min-width:180px">نوع الآيتم<input type="text" name="prizeType${rank}" placeholder="سلاح / مواد / عتاد / مركبة" /></label>
               <label style="flex:1;min-width:110px">المبلغ<input type="number" name="prizeAmount${rank}" min="0" placeholder="0" /></label>
-              <label style="flex:3;min-width:220px">رابط الصورة<input type="url" name="prizeImage${rank}" placeholder="https://…jpg" /></label>
+              <div style="flex:3;min-width:220px">
+                <span class="adm-label">صورة الهدية</span>
+                <div class="adm-row" style="gap:6px;align-items:center">
+                  <input type="url" name="prizeImage${rank}" placeholder="ارفع صورة أو الصق رابطًا" style="flex:1;min-width:0" />
+                  <button class="btn btn-ghost btn-sm" type="button" data-prize-pick="${rank}">رفع صورة</button>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" id="prize-file-${rank}" hidden />
+                </div>
+              </div>
             </div>
             <div class="adm-row" style="align-items:center;gap:8px">
               <img class="adm-prize-img" id="prize-prev-${rank}" alt="" />
@@ -328,6 +335,36 @@ async function tabSettings(box) {
     [1, 2, 3].forEach((rank) => {
       const input = box.querySelector(`[name="prizeImage${rank}"]`);
       if (input) input.addEventListener('input', () => paintPrize(rank));
+
+      const pickBtn = box.querySelector(`[data-prize-pick="${rank}"]`);
+      const fileInput = box.querySelector(`#prize-file-${rank}`);
+      if (pickBtn && fileInput) {
+        pickBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+          const file = fileInput.files && fileInput.files[0];
+          if (!file) return;
+          const hint = box.querySelector(`#prize-hint-${rank}`);
+          const original = pickBtn.textContent;
+          pickBtn.disabled = true;
+          pickBtn.textContent = 'جارٍ الرفع…';
+          if (hint) hint.textContent = '';
+          try {
+            const result = await upload(file);
+            const url = (result && result.url) || '';
+            if (!url) throw new Error('لم يُرجع السيرفر رابطًا للصورة');
+            const target = box.querySelector(`[name="prizeImage${rank}"]`);
+            if (target) target.value = url;
+            paintPrize(rank);
+            toast('رُفعت الصورة — اضغط «حفظ الهدف والهدايا»', 'success');
+          } catch (error) {
+            toast(error.message || 'تعذّر رفع الصورة', 'danger');
+          } finally {
+            pickBtn.disabled = false;
+            pickBtn.textContent = original;
+            fileInput.value = '';
+          }
+        });
+      }
     });
   }
   const goalSave = box.querySelector('#goal-save');
