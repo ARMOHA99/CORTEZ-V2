@@ -81,7 +81,7 @@ function serializeGoal(goal, context) {
     prizes: (goal.prizes || []).slice(0, 3).map((prize) => ({
       rank: Number(prize.rank) || 0,
       name: prize.name || '',
-      imageUrl: prize.imageUrl || '',
+      imageUrl: absoluteImage(prize.imageUrl),
       type: prize.type || '',
       amount: Number(prize.amount) || 0
     })),
@@ -98,6 +98,18 @@ function serializeGoal(goal, context) {
 }
 
 /* ترتيب/تنظيف الهدايا الثلاث */
+/* الصور المرفوعة داخل الموقع تُرجع مسارًا نسبيًا (/file/..)، ونحتاج رابطًا مطلقًا
+   حتى يظهر في ديسكورد وفي الداشبورد */
+const PUBLIC_BASE = String(process.env.BASE_URL || '').replace(/\/+$/, '');
+
+function absoluteImage(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw.slice(0, 500);
+  if (raw.startsWith('/')) return (PUBLIC_BASE + raw).slice(0, 500);
+  return raw.slice(0, 500);
+}
+
 function cleanPrizes(prizes) {
   const list = Array.isArray(prizes) ? prizes : [];
   return [1, 2, 3].map((rank) => {
@@ -105,7 +117,7 @@ function cleanPrizes(prizes) {
     return {
       rank,
       name: String(row.name || '').slice(0, 120),
-      imageUrl: String(row.imageUrl || '').slice(0, 500),
+      imageUrl: absoluteImage(row.imageUrl),
       type: String(row.type || '').slice(0, 60),
       amount: Math.max(0, Math.round(Number(row.amount) || 0))
     };
@@ -256,6 +268,7 @@ async function rolloverIfNeeded() {
 }
 
 module.exports = {
+  absoluteImage,
   weekContext,
   getCurrentGoal,
   serializeGoal,

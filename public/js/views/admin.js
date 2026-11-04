@@ -223,7 +223,7 @@ async function tabSettings(box) {
               <div style="flex:3;min-width:220px">
                 <span class="adm-label">صورة الهدية</span>
                 <div class="adm-row" style="gap:6px;align-items:center">
-                  <input type="url" name="prizeImage${rank}" placeholder="ارفع صورة أو الصق رابطًا" style="flex:1;min-width:0" />
+                  <input type="text" name="prizeImage${rank}" placeholder="ارفع صورة أو الصق رابطًا" style="flex:1;min-width:0" />
                   <button class="btn btn-ghost btn-sm" type="button" data-prize-pick="${rank}">رفع صورة</button>
                   <input type="file" accept="image/png,image/jpeg,image/webp" id="prize-file-${rank}" hidden />
                 </div>
@@ -293,7 +293,9 @@ async function tabSettings(box) {
     try {
       const file = await shrinkImage(picked);
       const res = await upload(file);
-      urlInput.value = res.url;
+      let logoUrl = res.url || '';
+      if (logoUrl.startsWith('/')) logoUrl = location.origin + logoUrl;
+      urlInput.value = logoUrl;
       setPrev();
       toast(res.note || 'تم رفع الشعار، اضغط «حفظ الإعدادات» لتثبيته', res.note ? 'warning' : 'success');
     } catch (e) { toast(e.message, 'danger'); }
@@ -350,8 +352,10 @@ async function tabSettings(box) {
           if (hint) hint.textContent = '';
           try {
             const result = await upload(file);
-            const url = (result && result.url) || '';
+            let url = (result && result.url) || '';
             if (!url) throw new Error('لم يُرجع السيرفر رابطًا للصورة');
+            /* الصور تُحفظ داخل الموقع برابط نسبي، نحوله لمطلق ليعمل في ديسكورد */
+            if (url.startsWith('/')) url = location.origin + url;
             const target = box.querySelector(`[name="prizeImage${rank}"]`);
             if (target) target.value = url;
             paintPrize(rank);
