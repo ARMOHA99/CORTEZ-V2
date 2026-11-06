@@ -43,6 +43,8 @@ const attendanceDaySchema = new mongoose.Schema(
     note: { type: String, default: '', maxlength: 400 },
     /* وقت إرسال ملاحظة الغياب في غرفة الملاحظات — يمنع التكرار */
     notifiedAt: { type: Date, default: null },
+    /* وقت تصعيد العضو للقيادة بعد استنفاد الإنذارات */
+    escalatedAt: { type: Date, default: null },
     evaluatedAt: { type: Date, default: Date.now }
   },
   {

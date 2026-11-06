@@ -10,6 +10,7 @@ const config = require('../../config');
 const time = require('../utils/time');
 const settingsService = require('./settings');
 const notifyService = require('./notify');
+const audit = require('./audit');
 const discord = require('./discord');
 const { httpError } = require('../utils/http');
 
@@ -181,6 +182,56 @@ async function sendDM(discordId, payload) {
   }
 }
 
+/* بعد استنفاد المستويات الثلاثة: يُرفع الأمر للقيادة للنظر في حال العضو */
+async function escalateToLeadership({ user, dateKey, streak, c }) {
+  const mention = user.discordId ? `<@${user.discordId}>` : displayName(user);
+  const embed = discord.embed(
+    'استحقاق مراجعة القيادة',
+    `العضو ${displayName(user)} بلغ الحد الأقصى للإنذارات (${MAX_LEVEL}) ثم غاب ${streak} أيام متتالية جديدة. القرار للقيادة: حظر، أو إعادة تأهيل، أو رفع الإنذارات.`,
+    0xf59e0b,
+    [
+      { name: 'العضو', value: mention, inline: true },
+      { name: 'الرتبة', value: user.rank || '—', inline: true },
+      { name: 'الغياب بعد آخر إنذار', value: `${streak} ${streak === 1 ? 'يوم' : 'أيام'}`, inline: true },
+      { name: 'اليوم', value: dateKey, inline: true }
+    ]
+  );
+  const sent = await sendChannel(c.warnChannelId || c.notifyChannelId, { content: mention, embeds: [embed] });
+
+  try {
+    const User = require('../models/User');
+    const leaders = await User.find({ rank: { $in: ['owner', 'operations'] }, blocked: false })
+      .select('_id')
+      .lean();
+    for (const leader of leaders) {
+      await notifyService
+        .push(leader._id, {
+          title: 'مراجعة قيادة — عضو بلغ الحد الأقصى للإنذارات',
+          body: `${displayName(user)} غاب ${streak} أيام بعد اكتمال إنذاراته. يحتاج قرارًا.`,
+          type: 'warning',
+          link: '#/attendance'
+        })
+        .catch(() => null);
+    }
+  } catch (error) {
+    /* الإشعار داخل الموقع اختياري */
+  }
+
+  try {
+    await audit.log({
+      action: 'attendance.escalate',
+      description: `تصعيد ${displayName(user)} للقيادة بعد ${MAX_LEVEL} إنذارات و${streak} أيام غياب`,
+      targetType: 'user',
+      targetId: String(user._id),
+      meta: { dateKey, streak }
+    });
+  } catch (error) {
+    /* التدقيق اختياري */
+  }
+
+  return sent !== false;
+}
+
 async function applyRoles(user, level, c) {
   if (!user || !user.discordId) return '';
   const roles = c.warnRoles.filter(Boolean);
@@ -216,6 +267,27 @@ async function stripRoles(user, c) {
   }
 }
 
+/* الحد الأقصى لمستويات الإنذار: بعد الثالث يُرفع الأمر للقيادة */
+const MAX_LEVEL = 3;
+
+/**
+ * يحسب الغياب المتتالي المنتهي باليوم الحالي، ويتوقف عند تاريخ آخر إنذار.
+ * الإنذار السابق «يصفّر» ما قبله: الغيابات التي سبقته محسوبة ومدفوعة،
+ * والعدّ يبدأ من اليوم الذي يليه. هذا يمنع إصدار إنذار جديد كل يوم.
+ */
+function countStreak(key, previousDays, lastWarningKey) {
+  let streak = 1; /* اليوم الحالي غياب */
+  let expected = time.addDaysToKey(key, -1);
+  for (const day of previousDays) {
+    if (day.dateKey !== expected) break; /* انقطاع في السلسلة */
+    if (day.status !== 'absent') break;
+    if (lastWarningKey && day.dateKey <= lastWarningKey) break; /* يبدأ عدّ جديد بعد آخر إنذار */
+    streak += 1;
+    expected = time.addDaysToKey(expected, -1);
+  }
+  return streak;
+}
+
 /* ─────────── أسماء وأشكال مساعدة ─────────── */
 function displayName(user) {
   return (user && (user.displayName || user.globalName || user.username)) || 'عضو';
@@ -246,8 +318,8 @@ async function isExempt(user, c, endDate) {
 async function issueWarning({ user, dateKey, streak, attendanceId, c, reason }) {
   const Warning = require('../models/Warning');
   const AttendanceDay = require('../models/AttendanceDay');
-  const active = await Warning.countDocuments({ user: user._id, status: 'active' });
-  const level = Math.min(5, active + 1);
+  const topActive = await Warning.findOne({ user: user._id, status: 'active' }).sort({ level: -1 }).select('level').lean();
+  const level = Math.min(MAX_LEVEL, (Number(topActive && topActive.level) || 0) + 1);
   const roleId = await applyRoles(user, level, c);
   const expiresAt = c.warnDays > 0 ? new Date(Date.now() + c.warnDays * 86400000) : null;
   const warning = await Warning.create({
@@ -391,6 +463,18 @@ async function evaluateDate(dateKey, { force = false } = {}) {
 
   /* الغياب المتتالي + الوارن */
   const severity = [];
+  const escalations = [];
+  const Warning = require('../models/Warning');
+  /* آخر إنذار لكل عضو: ما قبله محسوب ومصفّر */
+  const lastWarningMap = new Map();
+  if (absentees.length) {
+    const rows = await Warning.aggregate([
+      { $match: { user: { $in: absentees.map((entry) => entry.user._id) }, dateKey: { $ne: null } } },
+      { $group: { _id: '$user', last: { $max: '$dateKey' } } }
+    ]).catch(() => []);
+    for (const row of rows) lastWarningMap.set(String(row._id), row.last);
+  }
+
   for (const entry of absentees) {
     const uid = entry.user._id;
     const previous = await AttendanceDay.find({ user: uid, dateKey: { $lt: key } })
@@ -398,21 +482,41 @@ async function evaluateDate(dateKey, { force = false } = {}) {
       .limit(30)
       .select('dateKey status streak')
       .lean();
-    let streak = 1;
-    let expected = time.addDaysToKey(key, -1);
-    for (const day of previous) {
-      if (day.dateKey !== expected) break;
-      if (day.status !== 'absent') break;
-      streak += 1;
-      expected = time.addDaysToKey(expected, -1);
-    }
+    const lastWarningKey = lastWarningMap.get(String(uid)) || '';
     const dayDoc = await AttendanceDay.findOne({ user: uid, dateKey: key });
+    /* يوم صدر فيه إنذار محسوم: لا نعيد كتابة سلسلته ولا نصدر عليه شيئًا */
+    const warningToday = await Warning.findOne({ user: uid, dateKey: key }).select('_id').lean();
+    if (warningToday) {
+      if (dayDoc && !dayDoc.warning) {
+        dayDoc.warning = warningToday._id;
+        await dayDoc.save().catch(() => null);
+      }
+      continue;
+    }
+    const streak = countStreak(key, previous, lastWarningKey);
     if (dayDoc) {
       dayDoc.streak = streak;
       await dayDoc.save().catch(() => null);
     }
     if (streak >= c.absentLimit) {
-      const Warning = require('../models/Warning');
+      const topActive = await Warning.findOne({ user: uid, status: 'active' }).sort({ level: -1 }).select('level').lean();
+      const activeCount = Number(topActive && topActive.level) || 0;
+      /* وصل للحد الأقصى: لا إنذار رابع — يُرفع الأمر للقيادة مرة واحدة في اليوم */
+      if (activeCount >= MAX_LEVEL) {
+        if (dayDoc && !dayDoc.escalatedAt) {
+          const done = await escalateToLeadership({ user: entry.user, dateKey: key, streak, c }).catch((error) => {
+            console.error('[Attendance] تعذّر تصعيد الأمر للقيادة:', error.message);
+            return false;
+          });
+          if (done) {
+            dayDoc.escalatedAt = new Date();
+            await dayDoc.save().catch(() => null);
+            escalations.push(displayName(entry.user));
+            console.log(`[Attendance] تصعيد للقيادة: ${displayName(entry.user)} (${activeCount} إنذارات، غياب ${streak}) — ${key}`);
+          }
+        }
+        continue;
+      }
       const already = await Warning.findOne({ user: uid, dateKey: key });
       if (!already) {
         const warning = await issueWarning({
@@ -468,7 +572,7 @@ async function evaluateDate(dateKey, { force = false } = {}) {
     }
   }
 
-  console.log(`[Attendance] تقييم ${key}: حاضر ${presentees.length}، غائب ${absentees.length}، إنذارات ${severity.length}، ملاحظات ${noted} (حد الغياب ${c.absentLimit}، غرفة الإنذارات ${c.warnChannelId || c.notifyChannelId ? 'مضبوطة' : 'غير مضبوطة'}، رولات ${c.warnRoles.filter(Boolean).length})`);
+  console.log(`[Attendance] تقييم ${key}: حاضر ${presentees.length}، غائب ${absentees.length}، إنذارات ${severity.length}، تصعيد ${escalations.length}، ملاحظات ${noted} (حد الغياب ${c.absentLimit}، غرفة الإنذارات ${c.warnChannelId || c.notifyChannelId ? 'مضبوطة' : 'غير مضبوطة'}، رولات ${c.warnRoles.filter(Boolean).length})`);
 
   if (created > 0 && c.dailySummary && c.logChannelId) {
     const lines = [
@@ -633,6 +737,7 @@ async function recomputeAfter(userId, dateKey, c) {
       day.streak = streak;
       await day.save().catch(() => null);
     }
+    /* الفحص قبل التصفير: إن زال سبب الإنذار يُرفع */
     if (streak < c.absentLimit && day.warning) {
       const warning = await Warning.findById(day.warning);
       if (warning && warning.status === 'active') {
@@ -648,6 +753,8 @@ async function recomputeAfter(userId, dateKey, c) {
         }
       }
     }
+    /* يوم صدر فيه إنذار يصفّر العدّاد: الغيابات التالية تبدأ سلسلة جديدة */
+    if (day.warning) streak = 0;
   }
   return true;
 }
