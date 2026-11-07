@@ -229,7 +229,8 @@ async function escalateToLeadership({ user, dateKey, streak, c }) {
     /* التدقيق اختياري */
   }
 
-  return sent !== false;
+  if (sent === false) console.warn('[Attendance] لم تُرسل رسالة التصعيد إلى ديسكورد — تحقق من غرفة الإنذارات');
+  return true;
 }
 
 async function applyRoles(user, level, c) {
