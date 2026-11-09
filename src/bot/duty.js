@@ -283,4 +283,62 @@ async function handleButton(interaction) {
   }
 }
 
-module.exports = { handleButton, panelPayload, postPanel, formatMinutes };
+
+/* ═════ /duty: قائمة من هو داخل السيرفر الآن ═════ */
+async function status(interaction) {
+  try {
+    const settings = await settingsService.loadAll().catch(() => ({}));
+    const channelId = String(settings['duty.statusChannelId'] || '').trim();
+    if (channelId && interaction.channelId !== channelId) {
+      return interaction.reply({ content: `استخدم الأمر في القناة المخصّصة للدوام: <#${channelId}>`, ephemeral: true });
+    }
+    if (!dbReady()) {
+      return interaction.reply({ content: 'قاعدة البيانات غير متصلة حالياً.', ephemeral: true });
+    }
+    await interaction.deferReply();
+
+    const Shift = require('../models/Shift');
+    const agentService = require('../services/agent');
+    const window = await agentService.windowInfo().catch(() => null);
+
+    const shifts = await Shift.find({ status: { $in: ['active', 'paused'] }, kind: 'shift' })
+      .sort({ startAt: 1 })
+      .limit(50)
+      .lean();
+
+    const now = Date.now();
+    const lines = shifts.map((shift, index) => {
+      const name = (shift.userSnapshot && shift.userSnapshot.name) || 'عضو';
+      const rank = (shift.userSnapshot && shift.userSnapshot.rank) || '';
+      const since = Math.floor(new Date(shift.startAt).getTime() / 1000);
+      const mins = Math.max(0, Math.round((now - new Date(shift.startAt).getTime()) / 60000));
+      const state = shift.status === 'paused' ? '⏸ استراحة' : '🟢 داخل السيرفر';
+      return `**${index + 1}.** ${name}${rank ? ` — \`${rank}\`` : ''}\n${state} • من <t:${since}> • ${formatMinutes(mins)}`;
+    });
+
+    const embed = {
+      color: 0x22c55e,
+      title: `الحاضرون الآن — ${shifts.length}`,
+      description: lines.length ? lines.join('\n\n') : 'لا أحد داخل السيرفر الآن.',
+      footer: { text: window && window.enabled ? `نافذة الدوام ${window.start} → ${window.end} (الجزائر)` : 'الدوام تلقائي من تطبيق CortezAgent' },
+      timestamp: new Date().toISOString()
+    };
+    await interaction.editReply({ embeds: [embed] });
+    return null;
+  } catch (error) {
+    console.error('[Bot] /duty status:', error);
+    if (interaction.deferred && !interaction.replied) {
+      await interaction.editReply({ content: 'تعذّر قراءة حالة الدوام.' }).catch(() => null);
+    } else if (!interaction.replied) {
+      await interaction.reply({ content: 'تعذّر قراءة حالة الدوام.', ephemeral: true }).catch(() => null);
+    }
+    return null;
+  }
+}
+
+function dbReady() {
+  const mongoose = require('mongoose');
+  return mongoose.connection.readyState === 1;
+}
+
+module.exports = { status, handleButton, panelPayload, postPanel, formatMinutes };

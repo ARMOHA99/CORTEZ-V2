@@ -109,7 +109,7 @@ export async function render(root) {
     const statusText = summary.status === 'on' ? 'أنت على الدوام' : summary.status === 'break' ? 'أنت في استراحة' : 'أنت خارج الدوام';
 
     root.innerHTML = `
-      ${pageHeader({ kicker: 'DUTY MANAGEMENT', title: 'نظام الدوام', description: 'ابدأ دوامك، خذ استراحة، وأنهِه في الوقت المناسب.' })}
+      ${pageHeader({ kicker: 'DUTY MANAGEMENT', title: 'نظام الدوام', description: 'دوامك يُسجَّل تلقائيًا من التطبيق عند دخولك سيرفر هارموني.' })}
 
       ${attendanceOn ? '' : '<div class="card" style="margin-bottom:16px"><div class="card-body"><strong>تسجيل الحضور متوقف حالياً من الإدارة.</strong></div></div>'}
       ${lockNote}
@@ -125,11 +125,9 @@ export async function render(root) {
         <p class="eyebrow">CURRENT STATUS</p>
         <h3 style="margin:6px 0 18px">${statusText}</h3>
         ${summary.shift ? '<div class="duty-timer" id="duty-timer">00:00:00</div><div class="duty-timer-label">مدة الدوام الحالي</div>' : '<p class="muted">لم تبدأ دوامك بعد</p>'}
-        <div class="duty-buttons">
-          ${summary.status === 'off' && attendanceOn ? `<button class="btn btn-primary" id="btn-start" ${lockedNow ? 'disabled title="مقفل خارج نافذة الدوام"' : ''}>بدء الدوام</button>` : ''}
-          ${lockedNow && summary.status === 'off' ? '<p class="muted" style="margin-top:10px">الزر مقفل لين تدخل نافذة الدوام.</p>' : ''}
-          ${summary.status === 'on' ? '<button class="btn btn-ghost" id="btn-pause">استراحة</button><button class="btn btn-danger" id="btn-end">إنهاء الدوام</button>' : ''}
-          ${summary.status === 'break' ? `<button class="btn btn-primary" id="btn-resume" ${lockedNow ? 'disabled title="مقفل خارج نافذة الدوام"' : ''}>استئناف الدوام</button><button class="btn btn-danger" id="btn-end">إنهاء الدوام</button>` : ''}
+        <div class="card-body" style="padding:0">
+          <p class="muted" style="margin:0 auto;max-width:520px;line-height:1.8">الدوام يُسجَّل تلقائيًا: يبدأ لحظة دخولك سيرفر هارموني وينتهي عند خروجك أو إغلاقك اللعبة. لا حاجة لأي زر.</p>
+          <a class="btn btn-ghost" href="#/agent" style="margin-top:14px">تطبيق الدوام وحالة جهازي</a>
         </div>
       </div>
 
@@ -154,7 +152,8 @@ export async function render(root) {
           <div class="card-body stack">
             <div class="kv"><span>بداية الأسبوع</span><strong>${esc(summary.weekKey)}</strong></div>
             <div class="kv"><span>اليوم الحالي</span><strong>${esc(summary.dateKey)}</strong></div>
-            <div class="kv"><span>وقت الدوام المسموح</span><strong>${esc(night.start || '22:00')} - ${esc(night.end || '06:00')}</strong></div>
+            <div class="kv"><span>نافذة الدوام اليومية</span><strong>${data.window && data.window.enabled ? esc(data.window.start) + ' → ' + esc(data.window.end) : 'طوال اليوم'}</strong></div>
+            <div class="kv"><span>حالة النافذة الآن</span><strong class="${data.window && data.window.enabled && !data.window.isOpen ? 'muted' : 'ok'}">${!data.window || !data.window.enabled ? 'مفتوحة' : data.window.isOpen ? 'مفتوحة' : 'مغلقة'}</strong></div>
           </div>
         </div>
       </div>
@@ -167,26 +166,7 @@ export async function render(root) {
       if (summary.status === 'on') timer = setInterval(tick, 1000);
     }
 
-    const act = (selector, path, soundFn) => {
-      const btn = root.querySelector(selector);
-      if (!btn) return;
-      btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        try {
-          await post(path);
-          soundFn();
-          render(root);
-        } catch (error) {
-          sound.error();
-          toast(error.message, 'danger');
-          btn.disabled = false;
-        }
-      });
-    };
-    act('#btn-start', '/api/duty/start', sound.success);
-    act('#btn-pause', '/api/duty/pause', sound.click);
-    act('#btn-resume', '/api/duty/resume', sound.click);
-    act('#btn-end', '/api/duty/end', sound.success);
+
   } catch (error) {
     root.innerHTML = `<div class="card"><h3>خطأ</h3><p class="muted">${esc(error.message)}</p></div>`;
   }

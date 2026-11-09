@@ -22,14 +22,26 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const summary = await dutyService.personalSummary(req.user._id);
-    res.json({ status: summary.status, shift: summary.shift });
+    const agentService = require('../services/agent');
+    const window = await agentService.windowInfo().catch(() => null);
+    res.json({ status: summary.status, shift: summary.shift, window, autoDuty: (await settingsService.get('agent.autoDuty', true)) !== false });
   })
 );
+
+
+/* الدوام يُسجَّل من تطبيق CortezAgent فقط عندما يكون التشغيل التلقائي مفعّلًا */
+async function blockManual() {
+  const auto = await settingsService.get('agent.autoDuty', true);
+  if (auto !== false) {
+    throw httpError(403, 'الدوام يُسجَّل تلقائيًا من تطبيق CortezAgent عند دخولك السيرفر. لا حاجة لأزرار.', 'AGENT_ONLY');
+  }
+}
 
 router.post(
   '/start',
   requireAuth,
   asyncHandler(async (req, res) => {
+    await blockManual();
     const attendanceEnabled = await settingsService.get('attendance.enabled', true);
     if (attendanceEnabled === false) throw httpError(403, 'تسجيل الحضور متوقف حالياً من الإدارة', 'ATTENDANCE_DISABLED');
     const result = await dutyService.startDuty(req.user, req);
@@ -42,6 +54,7 @@ router.post(
   '/pause',
   requireAuth,
   asyncHandler(async (req, res) => {
+    await blockManual();
     const result = await dutyService.pauseDuty(req.user);
     const summary = await dutyService.personalSummary(req.user._id);
     res.json({ ok: true, ...result, summary });
@@ -52,6 +65,7 @@ router.post(
   '/resume',
   requireAuth,
   asyncHandler(async (req, res) => {
+    await blockManual();
     const result = await dutyService.resumeDuty(req.user);
     const summary = await dutyService.personalSummary(req.user._id);
     res.json({ ok: true, ...result, summary });
@@ -62,6 +76,7 @@ router.post(
   '/end',
   requireAuth,
   asyncHandler(async (req, res) => {
+    await blockManual();
     const result = await dutyService.endDuty(req.user, { note: req.body.note });
     const summary = await dutyService.personalSummary(req.user._id);
     res.json({ ok: true, ...result, summary });

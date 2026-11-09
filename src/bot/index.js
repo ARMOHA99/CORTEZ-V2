@@ -70,8 +70,7 @@ async function registerCommands() {
       .setDescription('روابط ومعلومات منصة كورتاس'),
     new SlashCommandBuilder()
       .setName('duty')
-      .setDescription('نشر لوحة الدوام في هذه القناة')
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+      .setDescription('حالة الدوام: من هو داخل السيرفر الآن')
   ].map((command) => command.toJSON());
 
   try {
@@ -160,11 +159,9 @@ function startBot() {
     client.on(Events.InteractionCreate, async (interaction) => {
       // أزرار لوحة الدوام (بدء / استراحة / متابعة / إنهاء)
       if (interaction.isButton() && interaction.customId.startsWith('duty:')) {
-        try {
-          await dutyBot.handleButton(interaction);
-        } catch (error) {
-          console.error('[Bot] duty button:', error);
-        }
+        await interaction
+          .reply({ content: 'أُلغي تسجيل الدوام من ديسكورد. صار تلقائيًا من تطبيق CortezAgent عند دخولك السيرفر.', ephemeral: true })
+          .catch(() => null);
         return;
       }
 
@@ -175,12 +172,7 @@ function startBot() {
         } else if (interaction.commandName === 'cortez') {
           await handleCortez(interaction);
         } else if (interaction.commandName === 'duty') {
-          if (!interaction.channel || typeof interaction.channel.send !== 'function') {
-            await interaction.reply({ content: 'استخدم الأمر داخل قناة نصية.', ephemeral: true });
-            return;
-          }
-          await dutyBot.postPanel(interaction.channel);
-          await interaction.reply({ content: '✅ تم نشر لوحة الدوام.', ephemeral: true });
+          await dutyBot.status(interaction);
         }
       } catch (error) {
         console.error('[Bot] interaction:', error);

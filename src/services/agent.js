@@ -8,6 +8,7 @@
 const crypto = require('crypto');
 const settingsService = require('./settings');
 const realtime = require('../realtime');
+const time = require('../utils/time');
 const audit = require('./audit');
 const { httpError } = require('../utils/http');
 
@@ -16,7 +17,7 @@ const DEFAULTS = {
   required: false,
   host: '185.239.175.27',
   port: 30120,
-  version: '1.7.0',
+  version: '1.8.0',
   downloadUrl: '/download/CortezAgent.exe',
   intervalSeconds: 30,
   autoDuty: true,
@@ -199,7 +200,19 @@ async function syncShift(userId, onDuty) {
   const duty = require('./duty');
   const user = await User.findById(userId);
   if (!user || user.blocked) return null;
+  const window = await dutyWindow();
+  const allowed = insideWindow(window, user.rank);
   const active = await duty.findActiveShift(user._id);
+
+  /* داخل السيرفر لكن خارج النافذة اليومية: يُؤجَّل الدوام ولا يُحتسب */
+  if (onDuty && !allowed) {
+    if (active && active.agentAuto) {
+      await duty.endDuty(user, { note: `انتهت نافذة الدوام (${window.start} → ${window.end})` });
+      return { closedByWindow: true };
+    }
+    return { outsideWindow: true };
+  }
+
   if (onDuty) {
     if (active) {
       if (active.agentAuto) {
@@ -222,6 +235,61 @@ async function syncShift(userId, onDuty) {
     return { cancelled: true };
   }
   return duty.endDuty(user, { note: 'انقطاع الاتصال بسيرفر فايفم — تطبيق الدوام' });
+}
+
+
+/* ═════ نافذة الدوام اليومية ═════ */
+async function dutyWindow() {
+  let s = {};
+  try {
+    s = (await settingsService.getAll()) || {};
+  } catch (error) {
+    s = {};
+  }
+  const start = String(s['duty.windowStart'] || '10:00');
+  const end = String(s['duty.windowEnd'] || '15:00');
+  const ranks = Array.isArray(s['duty.windowExemptRanks'])
+    ? s['duty.windowExemptRanks'].map((r) => String(r || '').trim()).filter(Boolean)
+    : ['owner', 'operations'];
+  return {
+    enabled: s['duty.windowEnabled'] === true,
+    start,
+    end,
+    startMin: time.parseTimeToMinutes(start, 600),
+    endMin: time.parseTimeToMinutes(end, 900),
+    exemptRanks: ranks
+  };
+}
+
+/* دقائق اليوم الحالية بتوقيت المدينة */
+function minutesNow() {
+  const parts = time.zonedParts(new Date());
+  return Number(parts.hour) * 60 + Number(parts.minute);
+}
+
+/* هل الوقت الحالي داخل النافذة؟ (تدعم النافذة الليلية) */
+function insideWindow(window, rank) {
+  if (!window.enabled) return true;
+  if (window.exemptRanks.includes(rank)) return true;
+  const now = minutesNow();
+  if (window.startMin === window.endMin) return true;
+  if (window.startMin < window.endMin) return now >= window.startMin && now < window.endMin;
+  return now >= window.startMin || now < window.endMin;
+}
+
+async function windowInfo() {
+  const w = await dutyWindow();
+  const parts = time.zonedParts(new Date());
+  const nowMinutes = Number(parts.hour) * 60 + Number(parts.minute);
+  return {
+    enabled: w.enabled,
+    start: w.start,
+    end: w.end,
+    exemptRanks: w.exemptRanks,
+    nowMinutes,
+    isOpen: insideWindow(w, '' ),
+    tz: 'Africa/Algiers'
+  };
 }
 
 /* النبضة من التطبيق */
@@ -265,6 +333,45 @@ async function heartbeat({ token, connected = false, verified = false, version =
     version: c.version,
     downloadUrl: c.downloadUrl
   };
+}
+
+/*
+ * تُستدعى كل دقيقة: من هو داخل السيرفر تستمر مزامنته،
+ * فيبدأ الدوام مع فتح النافذة اليومية وينتهي بانتهائها.
+ */
+async function syncWindowTick() {
+  if (!mongooseReady()) return { skipped: true };
+  const AgentDevice = require('../models/AgentDevice');
+  const window = await dutyWindow();
+  if (!window.enabled) return { skipped: true };
+  const limit = new Date(Date.now() - onlineWindow(await cfg()));
+  const devices = await AgentDevice.find({ revokedAt: null, duty: true, lastSeenAt: { $gte: limit } })
+    .select('user')
+    .lean();
+  let opened = 0;
+  let closed = 0;
+  for (const device of devices) {
+    const before = await require('./duty').findActiveShift(device.user);
+    const result = await syncShift(device.user, true).catch(() => null);
+    if (!result) continue;
+    if (result.closedByWindow) closed += 1;
+    else if (!before) opened += 1;
+  }
+  /* من انتهت نافذته ودوامه ما زال مفتوحًا من التطبيق */
+  const dutyService = require('./duty');
+  const Shift = require('../models/Shift');
+  const User = require('../models/User');
+  const openAgentShifts = await Shift.find({ status: { $in: ['active', 'paused'] }, agentAuto: true }).lean();
+  for (const shift of openAgentShifts) {
+    const user = await User.findById(shift.user);
+    if (!user) continue;
+    if (!insideWindow(window, user.rank)) {
+      await dutyService.endDuty(user, { note: `انتهت نافذة الدوام (${window.start} → ${window.end})` }).catch(() => null);
+      closed += 1;
+    }
+  }
+  if (opened || closed) console.log(`[Agent] نافذة الدوام: فُتح ${opened} وأُغلق ${closed}`);
+  return { opened, closed };
 }
 
 /* إلغاء دوام حالي بدأ من التطبيق — بلا احتساب دقائق */
@@ -337,6 +444,8 @@ module.exports = {
   statusFor,
   blockedFor,
   syncShift,
+  syncWindowTick,
+  windowInfo,
   cancelOwnShift,
   createCode,
   link,

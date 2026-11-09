@@ -244,6 +244,19 @@ async function tabSettings(box) {
       </div></div>
 
       <div class="card"><div class="card-body adm-form">
+        <h3>نافذة الدوام اليومية</h3>
+        <p class="adm-note">خارج هذه النافذة لا يُحتسب أي دوام حتى لو كان العضو داخل السيرفر. يبدأ الدوام تلقائيًا عند فتح النافذة وينتهي عند إغلاقها.</p>
+        ${sw('dutyWindowEnabled', 'تفعيل نافذة الدوام اليومية', s['duty.windowEnabled'] === true)}
+        <div class="adm-row">
+          <label style="flex:1;min-width:120px">تبدأ<input type="time" name="dutyWindowStart" value="${esc(s['duty.windowStart'] || '10:00')}" /></label>
+          <label style="flex:1;min-width:120px">تنتهي<input type="time" name="dutyWindowEnd" value="${esc(s['duty.windowEnd'] || '15:00')}" /></label>
+          <label style="flex:2;min-width:180px">رتب معفاة (بفواصل)<input type="text" name="dutyWindowExempt" value="${esc((s['duty.windowExemptRanks'] || ['owner','operations']).join(','))}" /></label>
+        </div>
+        <label>قناة أمر /duty في ديسكورد (المعرّف، وليس الاسم)<input type="text" name="dutyStatusChannel" value="${esc(s['duty.statusChannelId'] || '')}" placeholder="اتركه فارغًا للسماح في أي قناة" /></label>
+        <div class="adm-actions"><button class="btn btn-primary btn-sm" type="button" id="duty-window-save">حفظ إعدادات الدوام</button></div>
+      </div></div>
+
+      <div class="card"><div class="card-body adm-form">
         <h3>تطبيق الدوام (CortezAgent)</h3>
         <p class="adm-note">تطبيق صغير على جهاز العضو يفحص اتصاله بسيرفر فايفم ويرسل نبضة للموقع. مع «إلزامي» لا يدخل الموقع إلا من ربط جهازه.</p>
         ${sw('agentEnabled', 'تفعيل نظام تطبيق الدوام', s['agent.enabled'] !== false)}
@@ -320,6 +333,27 @@ async function tabSettings(box) {
       toast(res.note || 'تم رفع الشعار، اضغط «حفظ الإعدادات» لتثبيته', res.note ? 'warning' : 'success');
     } catch (e) { toast(e.message, 'danger'); }
   });
+
+  /* نافذة الدوام اليومية */
+  const dutySave = box.querySelector('#duty-window-save');
+  if (dutySave) {
+    dutySave.addEventListener('click', async () => {
+      const read = {
+        'duty.windowEnabled': Boolean(box.querySelector('[name="dutyWindowEnabled"]')?.checked),
+        'duty.windowStart': (box.querySelector('[name="dutyWindowStart"]')?.value || '10:00').slice(0, 5),
+        'duty.windowEnd': (box.querySelector('[name="dutyWindowEnd"]')?.value || '15:00').slice(0, 5),
+        'duty.windowExemptRanks': (box.querySelector('[name="dutyWindowExempt"]')?.value || '')
+          .split(',')
+          .map((r) => r.trim())
+          .filter(Boolean),
+        'duty.statusChannelId': (box.querySelector('[name="dutyStatusChannel"]')?.value || '').trim()
+      };
+      try {
+        await patch('/api/admin/settings', { entries: Object.entries(read).map(([key, value]) => ({ key, value })) });
+        toast('تم حفظ نافذة الدوام', 'success');
+      } catch (error) { toast(error.message, 'danger'); }
+    });
+  }
 
   /* تطبيق الدوام: حفظ الإعدادات + قائمة الأجهزة */
   const agentSave = box.querySelector('#agent-save');

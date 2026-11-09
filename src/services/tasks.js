@@ -69,6 +69,16 @@ async function tickAttendance() {
   }
 }
 
+/* نافذة الدوام اليومية: تبدأ وتنهي الدوام تلقائيًا حسب الوقت */
+async function tickDutyWindow() {
+  try {
+    const agentService = require('./agent');
+    await agentService.syncWindowTick();
+  } catch (error) {
+    console.error('[Tasks] نافذة الدوام:', error.message);
+  }
+}
+
 function startTasks() {
   if (running) return;
   running = true;
@@ -79,6 +89,8 @@ function startTasks() {
   timers.push(setInterval(tickSync, 120 * 1000));
   timers.push(setInterval(tickSyncAll, 30 * 60 * 1000));
   timers.push(setInterval(tickAttendance, 5 * 60 * 1000));
+  timers.push(setInterval(tickDutyWindow, 60 * 1000));
+  setTimeout(tickDutyWindow, 20 * 1000);
   setTimeout(tickAttendance, 45 * 1000);
   setTimeout(tickSyncAll, 90 * 1000);
   setTimeout(tickGoal, 4000);
