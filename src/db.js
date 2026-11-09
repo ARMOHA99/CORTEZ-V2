@@ -33,20 +33,15 @@ async function connectDB() {
       try {
         const User = require('./models/User');
         const cutoff = new Date('2026-11-09T17:44:00Z');
-        const filter = {
-          createdAt: { $gte: cutoff },
-          rank: 'guest',
-          lastSeen: null,
-          'bloodPact.signed': { $ne: true }
-        };
-        const before = await User.countDocuments({});
-        const probe = await User.findOne({ rank: 'guest' }).lean();
-        console.log('[Maint] فحص حقول:', probe ? Object.keys(probe).filter((k) => /creat|seen|pact/i.test(k)).join(',') + ` | createdAt=${probe.createdAt} | lastSeen=${probe.lastSeen} | signed=${JSON.stringify(probe.bloodPact)}` : '(لا عضو)');
-        const targets = await User.find(filter).select('username displayName').lean();
-        await User.deleteMany(filter);
-        const after = await User.countDocuments({});
-        console.log(`[Maint] حذف ${targets.length} حسابًا مستوردًا — قبل: ${before} — بعد: ${after}`);
-        console.log(`[Maint] عيّنة محذوفة: ${targets.slice(0, 5).map((t) => t.username).join(', ') || '—'}`);
+        const protect = ['851001350925451284', '905438798962364487'];
+        const created = await User.countDocuments({ createdAt: { $gte: cutoff } });
+        const filter = { createdAt: { $gte: cutoff }, discordId: { $nin: protect } };
+        const targets = await User.find(filter).select('username displayName createdAt').lean();
+        console.log(`[Maint] أُنشئ بعد القطع: ${created} — سيُحذف: ${targets.length} — عيّنة: ${targets.slice(0, 6).map((t) => t.username).join(', ') || '—'}`);
+        if (targets.length && targets.length <= created) {
+          await User.deleteMany(filter);
+        }
+        console.log(`[Maint] الإجمالي بعد الحذف: ${await User.countDocuments({})}`);
       } catch (error) {
         console.error('[Maint] فشل الحذف:', error.message);
       }
