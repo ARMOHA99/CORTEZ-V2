@@ -416,6 +416,16 @@ router.post(
 );
 
 router.get(
+  '/agent',
+  requireAuth,
+  requirePermission('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const agentService = require('../services/agent');
+    res.json(await agentService.overview());
+  })
+);
+
+router.get(
   '/goal',
   requireAuth,
   requirePermission('settings:manage'),

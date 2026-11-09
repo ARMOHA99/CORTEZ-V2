@@ -778,3 +778,23 @@
 @media (max-width: 560px) {
   .adm-prize .adm-row > div { flex: 1 1 100% !important; min-width: 0 !important; }
 }
+
+/* ═══ بوابة تطبيق الدوام ═══ */
+.agent-doc { max-width: 720px; }
+.agent-steps { display: grid; gap: 10px; margin: 16px 0; }
+.agent-step { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
+.agent-step strong { display: block; font-size: 13.5px; }
+.agent-step p { margin: 2px 0 0; font-size: 12px; }
+.agent-step > div { flex: 1; min-width: 0; }
+.agent-step-num { width: 28px; height: 28px; flex: 0 0 28px; display: grid; place-items: center; border-radius: 50%; background: rgba(34,197,94,.15); color: var(--primary); font-weight: 800; font-size: 13px; }
+.agent-code-box { border: 1px dashed rgba(34,197,94,.4); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.agent-code-line { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.agent-code-line strong { font-family: ui-monospace, monospace; font-size: 22px; letter-spacing: .18em; color: var(--primary); }
+.agent-cmd { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.agent-cmd code { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 12.5px; direction: ltr; text-align: left; overflow-x: auto; white-space: nowrap; }
+.pact-warning.ok { color: var(--primary); }
+.agent-target { font-size: 11.5px; margin: 8px 0 0; }
+@media (max-width: 560px) {
+  .agent-step { flex-wrap: wrap; }
+  .agent-code-line strong { font-size: 18px; }
+}

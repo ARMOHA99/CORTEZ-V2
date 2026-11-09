@@ -271,6 +271,52 @@
     </div>
   </div>
 
+  <!-- ══════════════════════ بوابة تطبيق الدوام ══════════════════════ -->
+  <div id="agent-gate" class="pact-gate hidden" role="dialog" aria-modal="true" aria-labelledby="agent-gate-title">
+    <div class="pact-backdrop"></div>
+    <div class="pact-frame">
+      <div class="pact-doc agent-doc">
+        <div class="pact-top">
+          <span class="pact-mark">A</span>
+          <div>
+            <p class="eyebrow">CORTEZ AGENT • <span id="agent-gate-version">V1.0.0</span></p>
+            <h2 id="agent-gate-title">تطبيق الدوام</h2>
+            <p class="pact-sub">الدم لا ينسى، والدوام يُسجَّل من جهازك</p>
+          </div>
+        </div>
+        <div class="agent-steps">
+          <div class="agent-step">
+            <span class="agent-step-num">1</span>
+            <div><strong>حمّل التطبيق</strong><p class="muted">ملف واحد صغير لا يستهلك جهازك.</p></div>
+            <a class="btn btn-primary btn-sm" id="agent-download" href="/api/agent/download">تحميل</a>
+          </div>
+          <div class="agent-step">
+            <span class="agent-step-num">2</span>
+            <div><strong>اطلب رمز الربط</strong><p class="muted">رمز لمرة واحدة يربط جهازك بحسابك.</p></div>
+            <button class="btn btn-ghost btn-sm" type="button" id="agent-code-btn">إنشاء رمز</button>
+          </div>
+          <div class="agent-step">
+            <span class="agent-step-num">3</span>
+            <div><strong>شغّل التطبيق بالرمز</strong><p class="muted">انسخ الأمر وشغّله في مجلد التحميل.</p></div>
+          </div>
+        </div>
+        <div class="agent-code-box hidden" id="agent-code-box">
+          <div class="agent-code-line">
+            <span class="muted">الرمز</span>
+            <strong id="agent-code-value">--------</strong>
+            <span class="muted" id="agent-code-expiry"></span>
+          </div>
+          <div class="agent-cmd">
+            <code id="agent-command">CortezAgent.exe --link XXXXXXXX</code>
+            <button class="btn btn-ghost btn-sm" type="button" id="agent-copy">نسخ</button>
+          </div>
+          <p class="pact-warning" id="agent-status-line">بانتظار ربط الجهاز…</p>
+        </div>
+        <p class="agent-target muted" id="agent-target"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════════ عناصر عامة ══════════════════════ -->
   <button id="sound-fab" class="sound-fab" type="button" aria-label="كتم الصوت" title="كتم / تشغيل الصوت">
     <span class="sound-on">🔊</span><span class="sound-off">🔇</span>

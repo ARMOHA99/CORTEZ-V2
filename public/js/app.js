@@ -209,6 +209,103 @@ function hidePact() {
   document.getElementById('pact-gate').classList.add('hidden');
 }
 
+/* ═════ بوابة تطبيق الدوام: لا دخول قبل ربط الجهاز ═════ */
+let agentPoll = null;
+
+function hideAgentGate() {
+  const gate = document.getElementById('agent-gate');
+  if (gate) gate.classList.add('hidden');
+  if (agentPoll) {
+    clearInterval(agentPoll);
+    agentPoll = null;
+  }
+}
+
+function showAgentGate() {
+  const gate = document.getElementById('agent-gate');
+  if (gate) gate.classList.remove('hidden');
+}
+
+async function initAgentGate() {
+  const gate = document.getElementById('agent-gate');
+  if (!gate) return true;
+  let status = null;
+  try {
+    status = await get('/api/agent/status');
+  } catch (error) {
+    return true; /* لا نمنع الدخول لو تعذّر الفحص */
+  }
+  if (!status || !status.required) {
+    hideAgentGate();
+    return true;
+  }
+  const target = document.getElementById('agent-target');
+  const version = document.getElementById('agent-gate-version');
+  const download = document.getElementById('agent-download');
+  if (target) target.textContent = `يتحقق من الاتصال بـ ${status.target || ''} • نبضة كل ${status.intervalSeconds || 30} ثانية`;
+  if (version) version.textContent = 'V' + (status.version || '1.0.0');
+  if (download && status.downloadUrl) download.setAttribute('href', status.downloadUrl);
+
+  const codeBtn = document.getElementById('agent-code-btn');
+  const codeBox = document.getElementById('agent-code-box');
+  const codeValue = document.getElementById('agent-code-value');
+  const command = document.getElementById('agent-command');
+  const expiry = document.getElementById('agent-code-expiry');
+  const copyBtn = document.getElementById('agent-copy');
+  const statusLine = document.getElementById('agent-status-line');
+
+  if (codeBtn && !codeBtn.dataset.bound) {
+    codeBtn.dataset.bound = '1';
+    codeBtn.addEventListener('click', async () => {
+      codeBtn.disabled = true;
+      try {
+        const data = await post('/api/agent/code', {});
+        if (codeBox) codeBox.classList.remove('hidden');
+        if (codeValue) codeValue.textContent = data.code;
+        if (command) command.textContent = `CortezAgent.exe --link ${data.code}`;
+        if (expiry) expiry.textContent = 'صالح 30 دقيقة';
+        if (statusLine) {
+          statusLine.textContent = 'بانتظار ربط الجهاز… شغّل الأمر في مجلد التحميل.';
+          statusLine.classList.remove('ok');
+        }
+      } catch (error) {
+        if (statusLine) statusLine.textContent = error.message || 'تعذّر إنشاء الرمز';
+      } finally {
+        codeBtn.disabled = false;
+      }
+    });
+  }
+
+  if (copyBtn && !copyBtn.dataset.bound) {
+    copyBtn.dataset.bound = '1';
+    copyBtn.addEventListener('click', async () => {
+      const text = command ? command.textContent : '';
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = 'تم النسخ';
+        setTimeout(() => { copyBtn.textContent = 'نسخ'; }, 1500);
+      } catch (error) {
+        /* المتصفح قد يمنع النسخ */
+      }
+    });
+  }
+
+  showAgentGate();
+  if (agentPoll) clearInterval(agentPoll);
+  agentPoll = setInterval(async () => {
+    try {
+      const fresh = await get('/api/agent/status');
+      if (fresh && (!fresh.required || fresh.linked)) {
+        hideAgentGate();
+        initApp();
+      }
+    } catch (error) {
+      /* تجاهل */
+    }
+  }, 5000);
+  return false;
+}
+
 async function initPact() {
   const gate = document.getElementById('pact-gate');
   const text = document.getElementById('pact-text');
@@ -259,7 +356,12 @@ async function initPact() {
       try {
         const res = await post('/api/me/pact/sign', {});
         if (res && res.ok) {
-          setTimeout(() => { hidePact(); showApp(); initApp(); }, 900);
+          setTimeout(async () => {
+            hidePact();
+            showApp();
+            const ready = await initAgentGate();
+            if (ready) initApp();
+          }, 900);
         }
       } catch (e) {
         toast(e.message, 'danger');
@@ -317,7 +419,8 @@ async function boot() {
     initShell();
     await initPact();
     if (!state.pact || !state.pact.required) {
-      initApp();
+      const ready = await initAgentGate();
+      if (ready) initApp();
     }
     loadViews();
   } catch (e) {

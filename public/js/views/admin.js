@@ -244,6 +244,26 @@ async function tabSettings(box) {
       </div></div>
 
       <div class="card"><div class="card-body adm-form">
+        <h3>تطبيق الدوام (CortezAgent)</h3>
+        <p class="adm-note">تطبيق صغير على جهاز العضو يفحص اتصاله بسيرفر فايفم ويرسل نبضة للموقع. مع «إلزامي» لا يدخل الموقع إلا من ربط جهازه.</p>
+        ${sw('agentEnabled', 'تفعيل نظام تطبيق الدوام', s['agent.enabled'] !== false)}
+        ${sw('agentRequired', 'إلزامي: لا دخول للموقع قبل ربط التطبيق', s['agent.required'] === true)}
+        ${sw('agentAutoDuty', 'فتح وإغلاق الدوام تلقائيًا حسب الاتصال بالسيرفر', s['agent.autoDuty'] !== false)}
+        <div class="adm-row">
+          <label style="flex:2;min-width:180px">عنوان سيرفر فايفم<input type="text" name="agentHost" value="${esc(s['agent.host'] || '')}" placeholder="185.239.175.27" /></label>
+          <label style="flex:1;min-width:110px">المنفذ<input type="number" name="agentPort" value="${Number(s['agent.port']) || 30120}" min="1" max="65535" /></label>
+          <label style="flex:1;min-width:110px">كل كم ثانية<input type="number" name="agentInterval" value="${Number(s['agent.intervalSeconds']) || 30}" min="10" max="300" /></label>
+        </div>
+        <div class="adm-row">
+          <label style="flex:1;min-width:130px">إصدار التطبيق<input type="text" name="agentVersion" value="${esc(s['agent.version'] || '1.0.0')}" /></label>
+          <label style="flex:3;min-width:220px">رابط التحميل<input type="text" name="agentDownload" value="${esc(s['agent.downloadUrl'] || '/download/CortezAgent.exe')}" /></label>
+        </div>
+        <div class="adm-actions"><button class="btn btn-primary btn-sm" type="button" id="agent-save">حفظ إعدادات التطبيق</button></div>
+        <h4 style="margin:14px 0 6px">الأجهزة المرتبطة</h4>
+        <div id="agent-devices" class="muted">جارٍ التحميل…</div>
+      </div></div>
+
+      <div class="card"><div class="card-body adm-form">
         <h3>ديسكورد والبوت</h3>
         <label>رابط دعوة سيرفرك (الزر الذي يفتح ديسكورد)<input type="text" name="discordInvite" value="${esc(s['discord.inviteUrl'] || '')}" placeholder="https://discord.gg/xxxxxxx" /></label>
         <label>رقم قناة إشعارات طلبات المتجر<input type="text" name="chOrders" value="${esc(s['discord.channel.orders'] || '')}" placeholder="مثال: 123456789012345678" /></label>
@@ -300,6 +320,41 @@ async function tabSettings(box) {
       toast(res.note || 'تم رفع الشعار، اضغط «حفظ الإعدادات» لتثبيته', res.note ? 'warning' : 'success');
     } catch (e) { toast(e.message, 'danger'); }
   });
+
+  /* تطبيق الدوام: حفظ الإعدادات + قائمة الأجهزة */
+  const agentSave = box.querySelector('#agent-save');
+  if (agentSave) {
+    const readAgent = () => ({
+      'agent.enabled': Boolean(box.querySelector('[name="agentEnabled"]')?.checked),
+      'agent.required': Boolean(box.querySelector('[name="agentRequired"]')?.checked),
+      'agent.autoDuty': Boolean(box.querySelector('[name="agentAutoDuty"]')?.checked),
+      'agent.host': (box.querySelector('[name="agentHost"]')?.value || '').trim(),
+      'agent.port': Number(box.querySelector('[name="agentPort"]')?.value) || 30120,
+      'agent.intervalSeconds': Number(box.querySelector('[name="agentInterval"]')?.value) || 30,
+      'agent.version': (box.querySelector('[name="agentVersion"]')?.value || '1.0.0').trim(),
+      'agent.downloadUrl': (box.querySelector('[name="agentDownload"]')?.value || '').trim()
+    });
+    agentSave.addEventListener('click', async () => {
+      try {
+        const agentBody = readAgent();
+        await patch('/api/admin/settings', { entries: Object.entries(agentBody).map(([key, value]) => ({ key, value })) });
+        toast('تم حفظ إعدادات التطبيق', 'success');
+      } catch (error) { toast(error.message, 'danger'); }
+    });
+    const list = box.querySelector('#agent-devices');
+    try {
+      const data = await get('/api/admin/agent');
+      const rows = data.devices || [];
+      if (list) {
+        list.innerHTML = rows.length
+          ? rows.map((d) => `<div class="kv"><span>${esc(d.user ? d.user.name : '—')} <span class="muted">${esc(d.label || '')}</span></span><span class="${d.duty ? 'ok' : 'muted'}">${d.duty ? 'على الدوام' : d.online ? 'متصل' : 'غير متصل'}</span><span class="muted">${d.lastSeenAt ? timeAgo(d.lastSeenAt) : '—'}</span></div>`).join('')
+          : '<p class="muted">لا أجهزة مرتبطة بعد.</p>';
+        if (data.cfg) list.insertAdjacentHTML('afterbegin', `<p class="muted" style="font-size:12px">مرتبط: ${data.linked || 0} • متصل: ${data.online || 0} • على الدوام: ${data.duty || 0}</p>`);
+      }
+    } catch (error) {
+      if (list) list.textContent = 'تعذّر تحميل قائمة الأجهزة';
+    }
+  }
 
   /* الهدايا: تحميل المحفوظ + معاينة الصور + الحفظ */
   const prizeBox = box.querySelector('#goal-prizes');
