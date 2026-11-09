@@ -212,10 +212,8 @@ router.post(
   requirePermission('settings:manage'),
   asyncHandler(async (req, res) => {
     const syncService = require('../services/sync');
-    /* نستورد كل أعضاء ديسكورد أولًا (الأسماء والألقاب والصور) ثم نحدّث الرتب */
-    const imported = await syncService.importGuildMembers().catch((error) => ({ error: error.message }));
     syncService.syncAllUsers().catch((error) => console.error('[Admin] sync-all:', error.message));
-    res.json({ ok: true, started: true, imported });
+    res.json({ ok: true, started: true });
   })
 );
 

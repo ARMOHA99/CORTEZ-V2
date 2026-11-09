@@ -230,6 +230,18 @@ async function listGuildMembers({ max = 2000 } = {}) {
 
 async function getGuildMember(discordId) {
   if (!config.discord.guildId) return null;
+  /* REST مباشرة أولًا: لا كاش، ويرجّع لقب السيرفر (nick) الصحيح دائمًا */
+  if (hasBot()) {
+    try {
+      const member = await rest(`/guilds/${config.discord.guildId}/members/${discordId}`);
+      return normalizeMember(member);
+    } catch (error) {
+      if (error.status === 404 || error.code === 10007) return null;
+      if (error.status !== 429 && error.code !== 'BOT_NOT_CONFIGURED') {
+        console.error('[Discord] REST member:', error.message);
+      }
+    }
+  }
   if (isReady()) {
     try {
       const guild = client.guilds.cache.get(config.discord.guildId);
@@ -242,15 +254,7 @@ async function getGuildMember(discordId) {
       console.error('[Discord] fetch member:', error.message);
     }
   }
-  if (!hasBot()) return null;
-  try {
-    const member = await rest(`/guilds/${config.discord.guildId}/members/${discordId}`);
-    return normalizeMember(member);
-  } catch (error) {
-    if (error.status === 404 || error.code === 10007) return null;
-    console.error('[Discord] REST member:', error.message);
-    throw error;
-  }
+  return null;
 }
 
 async function assignRole(discordId, roleId) {

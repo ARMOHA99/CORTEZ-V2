@@ -392,13 +392,7 @@ async function evaluateDate(dateKey, { force = false } = {}) {
   const AttendanceDay = require('../models/AttendanceDay');
   const dutyService = require('./duty');
 
-  /* الغياب يُحسب على الأعضاء الموقّعين على عقد الدم فقط — لا يشمل أعضاء ديسكورد المستوردين بلا حساب فعّال */
-  const users = await User.find({
-    inGuild: true,
-    blocked: false,
-    rank: { $ne: 'guest' },
-    'bloodPact.signed': true
-  }).select('name username displayName globalName rank discordId leaveUntil joinedGuildAt createdAt').lean();
+  const users = await User.find({ inGuild: true, blocked: false }).select('name username displayName globalName rank discordId leaveUntil joinedGuildAt createdAt').lean();
   const shifts = await Shift.find({ kind: 'shift', startAt: { $gte: win.start, $lt: win.end } })
     .select('user totalMinutes status breakMinutes breaks')
     .lean();

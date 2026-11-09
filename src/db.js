@@ -28,6 +28,28 @@ async function connectDB() {
     state.connected = true;
     state.mode = 'mongodb';
     console.log(`[DB] تم الاتصال بقاعدة البيانات: ${mongoose.connection.name}`);
+    /* صيانة مؤقتة: حذف الحسابات التي أنشأها استيراد ديسكورد غير المصرّح به */
+    if (process.env.MAINTENANCE_ROLLBACK === '1') {
+      try {
+        const User = require('./models/User');
+        const cutoff = new Date(process.env.ROLLBACK_CUTOFF || '2026-11-09T17:44:00Z');
+        const filter = {
+          createdAt: { $gte: cutoff },
+          rank: 'guest',
+          lastSeen: null,
+          'bloodPact.signed': { $ne: true }
+        };
+        const before = await User.countDocuments({});
+        const targets = await User.find(filter).select('username displayName').lean();
+        await User.deleteMany(filter);
+        const after = await User.countDocuments({});
+        console.log(`[Maint] حذف ${targets.length} حسابًا مستوردًا — قبل: ${before} — بعد: ${after}`);
+        console.log(`[Maint] عيّنة محذوفة: ${targets.slice(0, 5).map((t) => t.username).join(', ') || '—'}`);
+      } catch (error) {
+        console.error('[Maint] فشل الحذف:', error.message);
+      }
+    }
+
     /* تشخيص سريع: أعداد الأعضاء والدوام — يظهر في سجلات Render */
     try {
       const User = require('./models/User');
