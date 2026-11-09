@@ -66,6 +66,9 @@ function csrfProtection(req, res, next) {
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
   if (safeMethods.includes(req.method)) return next();
   if (req.path.startsWith('/auth/discord')) return next();
+  /* نقاط تطبيق الدوام: لا تملك جلسة متصفح، وتُحمى برمز الربط/رمز الجهاز */
+  const agentPaths = ['/api/agent/link', '/api/agent/heartbeat'];
+  if (agentPaths.includes(req.path)) return next();
 
   const token = req.get('x-csrf-token') || (req.body && req.body._csrf);
   if (!token || token !== req.session.csrfToken) {
