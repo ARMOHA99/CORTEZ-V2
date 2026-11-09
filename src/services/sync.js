@@ -14,6 +14,8 @@ async function resolveRank(user, member) {
   return mapped ? mapped.key : null;
 }
 
+let nameDebugLeft = 0;
+
 async function syncUser(user, options = {}) {
   const { emit = true } = options;
   if (!mongooseReady()) return { skipped: true, reason: 'db' };
@@ -111,6 +113,13 @@ async function syncUser(user, options = {}) {
     update.sessionInvalid = false;
   }
 
+  if (nameDebugLeft > 0) {
+    nameDebugLeft -= 1;
+    console.log(
+      `[Sync][اسم] ${user.discordId} — nick=${JSON.stringify(member.nick)} global=${JSON.stringify(member.user.globalName)} user=${JSON.stringify(member.user.username)} → ${JSON.stringify(update.displayName)}`
+    );
+  }
+
   await User.updateOne({ _id: user._id }, { $set: update });
 
   if (emit && (rankChanged || update.displayName !== user.displayName)) {
@@ -161,6 +170,7 @@ async function syncAllUsers({ delayMs = 150 } = {}) {
   if (syncingAll) return { running: true };
   if (!mongooseReady() || !discordService.hasBot() || !config.discord.guildId) return { skipped: true };
   syncingAll = true;
+  nameDebugLeft = 5;
   const result = { total: 0, renamed: 0, rankChanged: 0, failed: 0 };
   try {
     const User = require('../models/User');
