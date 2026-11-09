@@ -136,6 +136,14 @@ async function build({ limit = 20, weekKey = null } = {}) {
     position: index + 1
   }));
 
+  const now = Date.now();
+  if (now - (global.__lbLogAt || 0) > 60000) {
+    global.__lbLogAt = now;
+    console.log(
+      `[Leaderboard] عرض ${ranked.length} عضوًا — الأعلى: ${ranked.slice(0, 3).map((i) => i.name).join(' ، ') || '(فارغ)'}`
+    );
+  }
+
   return {
     weekKey: targetWeek,
     weekEnd: require('../utils/time').addDaysToKey(targetWeek, 6),

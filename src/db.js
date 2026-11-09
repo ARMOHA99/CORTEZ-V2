@@ -40,6 +40,11 @@ async function connectDB() {
         Shift.countDocuments({})
       ]);
       console.log(`[DB] الأعضاء: ${total} — داخل السيرفر: ${inGuild} — بلا رتبة: ${guests} — محظورون: ${blocked} — سجلات الدوام: ${shifts}`);
+      const sample = await User.find({ rank: { $ne: 'guest' } })
+        .select('username displayName nick globalName')
+        .limit(6)
+        .lean();
+      console.log('[DB] عيّنة أسماء:', sample.map((u) => `${u.username}⇒${u.displayName || '(فارغ)'}`).join(' | ') || '(لا يوجد)');
     } catch (error) {
       console.warn('[DB] تعذّر عدّ السجلات:', error.message);
     }
