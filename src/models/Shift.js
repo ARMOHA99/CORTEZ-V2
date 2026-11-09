@@ -20,6 +20,10 @@ const shiftSchema = new mongoose.Schema(
     kind: { type: String, enum: ['shift', 'penalty', 'adjustment'], default: 'shift' },
     dateKey: { type: String, required: true, index: true },
     weekKey: { type: String, required: true, index: true },
+    /* دوام فتحه تطبيق الدوام تلقائيًا */
+    agentAuto: { type: Boolean, default: false },
+    /* هل ثبت وجود اتصال حقيقي بسيرفر اللعبة أثناء الدوام */
+    agentVerified: { type: Boolean, default: false },
     startAt: { type: Date, default: Date.now },
     endAt: { type: Date, default: null },
     status: { type: String, enum: ['active', 'paused', 'closed'], default: 'active', index: true },

@@ -42,6 +42,7 @@ export async function render(root) {
           <div class="adm-actions">
             <button class="btn btn-primary" type="button" id="agent-auto">ربط جهازي الآن</button>
             <button class="btn btn-ghost" type="button" id="agent-manual">رمز ربط يدوي</button>
+            ${status.duty ? '<button class="btn btn-danger" type="button" id="agent-cancel-shift">إلغاء الدوام الحالي بلا احتساب</button>' : ''}
           </div>
           <div class="agent-code-box hidden" id="agent-box" style="margin-top:14px">
             <div class="agent-code-line"><span class="muted">الرمز</span><strong id="agent-code-value">--------</strong><span class="muted">صالح 30 دقيقة</span></div>
@@ -95,6 +96,21 @@ export async function render(root) {
       toast(error.message, 'danger');
     }
   });
+
+  const cancelBtn = root.querySelector('#agent-cancel-shift');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      cancelBtn.disabled = true;
+      try {
+        await post('/api/agent/cancel-shift', {});
+        toast('أُلغي الدوام بلا احتساب دقائق', 'success');
+        render(root);
+      } catch (error) {
+        toast(error.message, 'danger');
+        cancelBtn.disabled = false;
+      }
+    });
+  }
 
   root.querySelector('#agent-copy').addEventListener('click', async () => {
     try {

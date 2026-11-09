@@ -135,7 +135,9 @@ async function startDuty(user, req = null, options = {}) {
     weekKey: context.weekKey,
     startAt: new Date(),
     status: 'active',
-    startedBy: user._id
+    startedBy: user._id,
+    agentAuto: options.agent === true,
+    agentVerified: options.agentVerified === true
   });
 
   await User.findByIdAndUpdate(user._id, {

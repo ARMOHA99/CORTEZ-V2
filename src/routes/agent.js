@@ -82,8 +82,20 @@ router.post(
   '/heartbeat',
   asyncHandler(async (req, res) => {
     const body = req.body || {};
-    const result = await agent.heartbeat({ token: body.token, connected: body.connected, version: body.version }, ipHash(req));
+    const result = await agent.heartbeat(
+      { token: body.token, connected: body.connected, verified: body.verified, version: body.version },
+      ipHash(req)
+    );
     res.json(result);
+  })
+);
+
+/* إلغاء دوام بدأ من التطبيق بالخطأ */
+router.post(
+  '/cancel-shift',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    res.json(await agent.cancelOwnShift(req.user));
   })
 );
 

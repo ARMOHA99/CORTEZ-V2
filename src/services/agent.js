@@ -7,6 +7,8 @@
 
 const crypto = require('crypto');
 const settingsService = require('./settings');
+const realtime = require('../realtime');
+const audit = require('./audit');
 const { httpError } = require('../utils/http');
 
 const DEFAULTS = {
@@ -14,7 +16,7 @@ const DEFAULTS = {
   required: false,
   host: '185.239.175.27',
   port: 30120,
-  version: '1.1.0',
+  version: '1.2.0',
   downloadUrl: '/download/CortezAgent.exe',
   intervalSeconds: 30,
   autoDuty: true,
@@ -192,22 +194,37 @@ async function link({ code, deviceId, label, platform, version }, ipHash) {
 async function syncShift(userId, onDuty) {
   if (!mongooseReady()) return null;
   const User = require('../models/User');
+  const Shift = require('../models/Shift');
   const duty = require('./duty');
   const user = await User.findById(userId);
   if (!user || user.blocked) return null;
   const active = await duty.findActiveShift(user._id);
   if (onDuty) {
-    if (active) return { skipped: 'already' };
-    const result = await duty.startDuty(user, null, { bypassLock: true });
-    return result;
+    if (active) {
+      if (active.agentAuto) {
+        active.agentVerified = true;
+        await active.save().catch(() => null);
+      }
+      return { skipped: 'already' };
+    }
+    return duty.startDuty(user, null, { bypassLock: true, agent: true, agentVerified: true });
   }
   if (!active) return { skipped: 'noShift' };
-  const result = await duty.endDuty(user, { note: 'انقطاع الاتصال بسيرفر فايفم — تطبيق الدوام' });
-  return result;
+  /* دوام فتحه التطبيق ولم يثبت فيه اتصال حقيقي = دوام كاذب: يُحذف بلا احتساب */
+  if (active.agentAuto && !active.agentVerified) {
+    await Shift.deleteOne({ _id: active._id }).catch(() => null);
+    await User.findByIdAndUpdate(user._id, {
+      $set: { 'duty.status': 'off', 'duty.shiftId': null, 'duty.since': null }
+    }).catch(() => null);
+    realtime.emit('duty:refresh', { reason: 'agent-false-shift' });
+    console.log('[Agent] أُلغي دوام كاذب لم يُثبت فيه اتصال باللعبة');
+    return { cancelled: true };
+  }
+  return duty.endDuty(user, { note: 'انقطاع الاتصال بسيرفر فايفم — تطبيق الدوام' });
 }
 
 /* النبضة من التطبيق */
-async function heartbeat({ token, connected = false, version = '' }, ipHash) {
+async function heartbeat({ token, connected = false, verified = false, version = '' }, ipHash) {
   if (!mongooseReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
   const AgentDevice = require('../models/AgentDevice');
   if (!token || !/^[a-f0-9]{64}$/i.test(String(token))) throw httpError(401, 'رمز الجهاز غير صحيح', 'BAD_TOKEN');
@@ -216,14 +233,19 @@ async function heartbeat({ token, connected = false, version = '' }, ipHash) {
 
   device.lastSeenAt = new Date();
   const wasDuty = Boolean(device.duty);
-  device.duty = connected === true || connected === 'true' || connected === 1;
+  /* لا نفتح دوامًا إلا إذا تحقق التطبيق أن اللعبة متصلة فعلاً بالسيرفر.
+     النسخ القديمة (قبل 1.2.0) لا ترسل verified فلا تُحسب. */
+  const onDuty = (connected === true || connected === 'true' || connected === 1) && (verified === true || verified === 'true' || verified === 1);
+  device.duty = onDuty;
+  if (onDuty) device.verifiedAt = new Date();
   if (version) device.appVersion = String(version).slice(0, 40);
   if (ipHash) device.lastIpHash = ipHash;
   await device.save();
 
   const c = await cfg();
   const nowDuty = Boolean(device.duty);
-  if (c.autoDuty && nowDuty !== wasDuty) {
+  /* نزامن دائمًا: يفتح عند الدخول، ويغلق أو يلغي أي دوام عالق عند الخروج */
+  if (c.autoDuty && (nowDuty || wasDuty || true)) {
     await syncShift(device.user, nowDuty).catch((error) => {
       console.error('[Agent] تعذّر تحديث الدوام تلقائيًا:', error.message);
     });
@@ -237,6 +259,39 @@ async function heartbeat({ token, connected = false, version = '' }, ipHash) {
     version: c.version,
     downloadUrl: c.downloadUrl
   };
+}
+
+/* إلغاء دوام حالي بدأ من التطبيق — بلا احتساب دقائق */
+async function cancelOwnShift(user) {
+  if (!mongooseReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+  const Shift = require('../models/Shift');
+  const AgentDevice = require('../models/AgentDevice');
+  const duty = require('./duty');
+  const active = await duty.findActiveShift(user._id);
+  if (!active) throw httpError(404, 'لا يوجد دوام نشط', 'NO_SHIFT');
+
+  const device = await AgentDevice.findOne({ user: user._id, revokedAt: null }).sort({ createdAt: -1 }).lean();
+  const startedAt = new Date(active.startAt).getTime();
+  const linkedAt = device && device.createdAt ? new Date(device.createdAt).getTime() - 5 * 60000 : 0;
+  if (!active.agentAuto && !(linkedAt && startedAt >= linkedAt)) {
+    throw httpError(400, 'هذا الدوام ليس من تطبيق الدوام. أنهِه من صفحة الدوام.', 'NOT_AGENT_SHIFT');
+  }
+  await Shift.deleteOne({ _id: active._id });
+  const User = require('../models/User');
+  await User.findByIdAndUpdate(user._id, { $set: { 'duty.status': 'off', 'duty.shiftId': null, 'duty.since': null } });
+  realtime.emit('duty:refresh', { reason: 'agent-cancel-own' });
+  try {
+    await audit.log({
+      action: 'agent.cancelShift',
+      description: `إلغاء دوام بدأ من التطبيق (${Math.round((Date.now() - startedAt) / 60000)} دقيقة)`,
+      targetType: 'user',
+      targetId: String(user._id),
+      meta: { shiftId: String(active._id) }
+    });
+  } catch (error) {
+    /* التدقيق اختياري */
+  }
+  return { ok: true };
 }
 
 async function unlink(user, deviceId) {
@@ -276,6 +331,7 @@ module.exports = {
   statusFor,
   blockedFor,
   syncShift,
+  cancelOwnShift,
   createCode,
   link,
   heartbeat,

@@ -15,6 +15,8 @@ const agentDeviceSchema = new mongoose.Schema(
     lastSeenAt: { type: Date, default: null, index: true },
     lastIpHash: { type: String, default: '' },
     duty: { type: Boolean, default: false },
+    /* آخر مرة ثبت فيها اتصال حقيقي بسيرفر اللعبة */
+    verifiedAt: { type: Date, default: null },
     revokedAt: { type: Date, default: null }
   },
   { timestamps: true }
