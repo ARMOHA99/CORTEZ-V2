@@ -302,9 +302,11 @@ function snapshot(user) {
   };
 }
 
-/* يوم انضمام العضو (أول يوم يُحسب عليه الدوام) — الغياب لا يُحسب قبل هذا اليوم */
+/* أول يوم دخل فيه العضو الموقع فعليًا: تاريخ توقيع عقد الدم، وإلا تاريخ إنشاء حسابه.
+   لا نستخدم تاريخ الانضمام لسيرفر ديسكورد لأنه أقدم بكثير من دخوله الموقع. */
 function joinDayKey(user, c) {
-  const joined = user.joinedGuildAt || user.createdAt;
+  const signed = user.bloodPact && user.bloodPact.signed ? user.bloodPact.signedAt : null;
+  const joined = signed || user.createdAt;
   if (!joined) return '';
   return dateKeyNow(new Date(joined), c);
 }
@@ -399,7 +401,7 @@ async function evaluateDate(dateKey, { force = false } = {}) {
   const AttendanceDay = require('../models/AttendanceDay');
   const dutyService = require('./duty');
 
-  const users = await User.find({ inGuild: true, blocked: false }).select('name username displayName globalName rank discordId leaveUntil joinedGuildAt createdAt').lean();
+  const users = await User.find({ inGuild: true, blocked: false }).select('name username displayName globalName rank discordId leaveUntil joinedGuildAt createdAt bloodPact').lean();
   const shifts = await Shift.find({ kind: 'shift', startAt: { $gte: win.start, $lt: win.end } })
     .select('user totalMinutes status breakMinutes breaks')
     .lean();
@@ -901,7 +903,7 @@ async function repairPreJoin({ apply = true } = {}) {
   const AttendanceDay = require('../models/AttendanceDay');
   const Warning = require('../models/Warning');
 
-  const users = await User.find({}).select('joinedGuildAt createdAt displayName username rank discordId').lean();
+  const users = await User.find({}).select('joinedGuildAt createdAt bloodPact displayName username rank discordId').lean();
   let removedDays = 0;
   let clearedWarnings = 0;
   const touched = [];
