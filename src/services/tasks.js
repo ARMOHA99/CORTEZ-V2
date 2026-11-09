@@ -99,27 +99,6 @@ function startTasks() {
   setTimeout(() => {
     require('./leaderboard').build({ limit: 10 }).catch(() => null);
   }, 130 * 1000);
-  setTimeout(async () => {
-    try {
-      const attendance = require('./attendance');
-      const out = await attendance.repairPreJoin({ apply: true });
-      console.log('[Tasks] إصلاح ما قبل الانضمام:', out.removedDays, 'يوم —', out.clearedWarnings, 'إنذار');
-      const User = require('../models/User');
-      const AttendanceDay = require('../models/AttendanceDay');
-      const Warning = require('../models/Warning');
-      const users = await User.find({}).select('displayName joinedGuildAt createdAt bloodPact rank').lean();
-      for (const u of users) {
-        const abs = await AttendanceDay.find({ user: u._id, status: 'absent' }).select('dateKey source').lean();
-        const warns = await Warning.find({ user: u._id, status: 'active' }).select('dateKey level').lean();
-        const d = (v) => (v ? String(v).slice(0, 10) : '-');
-        console.log(
-          `[Diag] ${u.displayName}: created=${d(u.createdAt)} joined=${d(u.joinedGuildAt)} signed=${d(u.bloodPact && u.bloodPact.signedAt)} abs=${abs.map((a) => a.dateKey + '/' + a.source).join(',') || '-'} warn=${warns.map((w) => w.level + ':' + w.dateKey).join(',') || '-'}`
-        );
-      }
-    } catch (error) {
-      console.error('[Tasks] repair-prejoin:', error.message);
-    }
-  }, 25 * 1000);
   setTimeout(tickGoal, 4000);
   setTimeout(tickVotes, 8000);
   setTimeout(tickPresence, 12000);
