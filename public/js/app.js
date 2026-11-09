@@ -595,7 +595,17 @@ document.addEventListener('click', (event) => {
 window.addEventListener('cortez:unauthorized', () => {
   const wasAuthenticated = state.authenticated;
   reset();
-  if (wasAuthenticated) window.location.href = '/';
+  if (!wasAuthenticated) return;
+  /* بدل صفحة فارغة: رسالة واضحة + زر تسجيل دخول */
+  if (!document.getElementById('session-notice')) {
+    const box = document.createElement('div');
+    box.id = 'session-notice';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#0b0b0c;padding:24px;text-align:center;color:#e8e8ea;font-family:inherit';
+    box.innerHTML = '<div style="max-width:420px"><h2 style="margin:0 0 10px">انتهت الجلسة أو رتبتك غير مفعّلة</h2>'
+      + '<p style="color:#9b9296;margin:0 0 18px">سجّل الدخول من جديد. لو تكررت الرسالة فرتبتك في ديسكورد غير مرتبطة برتبة موقع، تواصل مع القيادة.</p>'
+      + '<a href="/auth/discord" style="display:inline-block;padding:12px 20px;border-radius:10px;background:#22c55e;color:#08110c;font-weight:700;text-decoration:none">تسجيل الدخول</a></div>';
+    document.body.appendChild(box);
+  }
 });
 
 /* الوضع الفاتح/الداكن: يُربط قبل الإقلاع حتى لا يظهر الزر فارغًا */

@@ -8,10 +8,42 @@ function mongooseReady() {
   return mongoose.connection.readyState === 1;
 }
 
+/* رتب القيادة تُعرَف بالاسم أيضًا لو ما كانت مربوطة يدويًا في لوحة الإدارة */
+const LEADERSHIP_ROLE_NAMES = [
+  { re: /^(the\s*)?boss$/i, rank: 'owner' },
+  { re: /^under\s*boss$/i, rank: 'operations' }
+];
+
+async function roleNamesOf(roleIds = []) {
+  if (!roleIds.length || !config.discord.guildId) return [];
+  try {
+    const client = require('./discord').getClient();
+    const guild = client && client.guilds ? client.guilds.cache.get(config.discord.guildId) : null;
+    if (guild && guild.roles && guild.roles.cache.size) {
+      return roleIds.map((id) => {
+        const role = guild.roles.cache.get(id);
+        return role ? role.name : '';
+      }).filter(Boolean);
+    }
+  } catch (error) {
+    /* تجاهل */
+  }
+  try {
+    const rows = await require('./discord').rest(`/guilds/${config.discord.guildId}/roles`);
+    const map = new Map((rows || []).map((role) => [role.id, role.name]));
+    return roleIds.map((id) => map.get(id) || '').filter(Boolean);
+  } catch (error) {
+    return [];
+  }
+}
+
 async function resolveRank(user, member) {
   if (config.discord.ownerIds.includes(user.discordId)) return 'owner';
   const mapped = await getRankByDiscordRole(member.roles || []);
-  return mapped ? mapped.key : null;
+  if (mapped) return mapped.key;
+  const names = await roleNamesOf(member.roles || []);
+  const byName = LEADERSHIP_ROLE_NAMES.find((rule) => names.some((name) => rule.re.test(String(name).trim())));
+  return byName ? byName.rank : null;
 }
 
 async function syncUser(user, options = {}) {
@@ -92,7 +124,11 @@ async function syncUser(user, options = {}) {
     requireRole = true;
   }
 
-  if (computedRank) {
+  /* رتبة المالك (البوس) لا تُخفَّض تلقائيًا ولا تُبطَل جلستها من مزامنة ديسكورد */
+  if (user.rank === 'owner') {
+    update.rank = 'owner';
+    update.sessionInvalid = false;
+  } else if (computedRank) {
     if (computedRank !== user.rank) {
       update.rank = computedRank;
       update.rankAssignedAt = new Date();
@@ -112,6 +148,9 @@ async function syncUser(user, options = {}) {
   }
 
   await User.updateOne({ _id: user._id }, { $set: update });
+  if (rankChanged && (update.rank === 'owner' || update.rank === 'operations')) {
+    console.log(`[Sync] رتبة قيادة: ${update.displayName || user.displayName || user.discordId} => ${update.rank}`);
+  }
 
   if (emit && (rankChanged || update.displayName !== user.displayName)) {
     realtime.emitToUser(user._id, 'auth:refresh', {
