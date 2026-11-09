@@ -25,9 +25,10 @@ export async function render(root) {
       `:''}
       <div class="card">
         <div class="card-body">
-          ${items.slice(3).map((item,i)=>`
+          ${items.length === 0 ? '<p class="muted" style="padding:18px;text-align:center">لا يوجد أعضاء في اللوحة بعد — تظهر الأسماء بعد أول تسجيل دخول للأعضاء.</p>' : ''}
+          ${(items.length >= 3 ? items.slice(3) : items).map((item,i)=>`
             <div class="rank-row">
-              <span class="rank-pos">${i+4}</span>
+              <span class="rank-pos">${items.length >= 3 ? i + 4 : (item.position || i + 1)}</span>
               <div class="avatar" style="width:38px;height:38px">${item.avatarUrl?`<img src="${esc(item.avatarUrl)}" alt="" />`:`<span>${esc((item.name||'ك').charAt(0))}</span>`}</div>
               <div style="flex:1" data-member-id="${esc(String(item._id))}"><strong>${esc(item.name)}</strong><small class="muted" style="color:${esc(item.rankColor)}">${esc(item.rankName)}</small></div>
               <div class="row" style="gap:16px;font-size:12px"><span class="muted">${num(Math.floor(item.minutes/60))}س</span><span class="muted">${num(item.operations)} عملية</span><span class="rank-score">${num(item.score)} نقطة</span></div>
