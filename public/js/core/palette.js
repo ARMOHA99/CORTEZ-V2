@@ -22,6 +22,7 @@ const ROUTES = [
   { hash: '#/discipline', label: 'الانضباط', hint: 'التحذيرات والغرامات', glyph: '⚠', perm: 'discipline:view' },
   { hash: '#/announcements', label: 'الإعلانات', hint: 'بيانات القيادة', glyph: '◉' },
   { hash: '#/pacts', label: 'عقود الدم', hint: 'الولاء الموقّع', glyph: '✍', perm: 'pacts:view' },
+  { hash: '#/agent', label: 'تطبيق الدوام', hint: 'ربط جهازك', glyph: '💻' },
   { hash: '#/profile', label: 'ملفي الشخصي', hint: 'بطاقتي وأوسمتي', glyph: '◐' },
   { hash: '#/admin', label: 'الإدارة', hint: 'إعدادات المنظمة', glyph: '⚙', perm: 'system:admin' }
 ];

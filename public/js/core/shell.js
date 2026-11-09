@@ -14,6 +14,7 @@ const NAV = [
   { group: 'عام', items: [
     { id: 'dashboard', label: 'داشبورد', icon: 'dashboard', route: '#/dashboard', perm: 'dashboard:view' },
     { id: 'duty', label: 'الدوام', icon: 'duty', route: '#/duty' },
+    { id: 'agent', label: 'تطبيق الدوام', icon: 'agent', route: '#/agent' },
     { id: 'attendance', label: 'جدول الحضور', icon: 'attendance', route: '#/attendance', perm: 'attendance:view' },
     { id: 'leaderboard', label: 'لوحة الشرف', icon: 'leaderboard', route: '#/leaderboard', perm: 'leaderboard:view' }
   ]},

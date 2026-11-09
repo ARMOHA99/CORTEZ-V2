@@ -507,6 +507,7 @@ async function loadRoute(hash) {
     '#/tickets': () => import('./views/tickets.js'),
     '#/discipline': () => import('./views/discipline.js'),
     '#/pacts': () => import('./views/pacts.js'),
+    '#/agent': () => import('./views/agent.js'),
     '#/announcements': () => import('./views/announcements.js'),
     '#/admin': () => import('./views/admin.js'),
     '#/profile': () => import('./views/profile.js'),
