@@ -57,7 +57,8 @@ async function renderDevices(root) {
       <p class="muted" style="margin-top:0">التطبيق يفحص اتصالك بسيرفر فايفم (${esc(status.target || '')}) ويسجّل دوامك تلقائيًا. ملف واحد صغير، بلا نافذة، ويعمل مع تشغيل ويندوز.</p>
       <div class="adm-actions" style="margin-bottom:12px">
         <a class="btn btn-primary btn-sm" href="${esc(status.downloadUrl || '/download/CortezAgent.exe')}">تحميل التطبيق (V${esc(status.version || '1.0.0')})</a>
-        <button class="btn btn-ghost btn-sm" type="button" id="pact-agent-code">رمز ربط جديد</button>
+        <button class="btn btn-primary btn-sm" type="button" id="pact-agent-auto">ربط جهازي الآن</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="pact-agent-code">رمز ربط يدوي</button>
       </div>
       <div class="agent-code-box hidden" id="pact-agent-box">
         <div class="agent-code-line"><span class="muted">الرمز</span><strong id="pact-agent-value">--------</strong><span class="muted">صالح 30 دقيقة</span></div>
@@ -85,6 +86,24 @@ async function renderDevices(root) {
       }
     });
   }
+  const auto = card.querySelector('#pact-agent-auto');
+  if (auto) {
+    auto.addEventListener('click', async () => {
+      auto.disabled = true;
+      try {
+        const data = await post('/api/agent/code', {});
+        card.querySelector('#pact-agent-box').classList.remove('hidden');
+        card.querySelector('#pact-agent-value').textContent = data.code;
+        card.querySelector('#pact-agent-cmd').textContent = `CortezAgent.exe --link ${data.code}`;
+        location.href = `cortezagent://link/${data.code}`;
+      } catch (error) {
+        toast(error.message, 'danger');
+      } finally {
+        setTimeout(() => { auto.disabled = false; }, 4000);
+      }
+    });
+  }
+
   const copy = card.querySelector('#pact-agent-copy');
   if (copy) {
     copy.addEventListener('click', async () => {

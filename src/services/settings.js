@@ -42,7 +42,7 @@ function defaultSettings() {
     'agent.required': false,
     'agent.host': '185.239.175.27',
     'agent.port': 30120,
-    'agent.version': '1.0.0',
+    'agent.version': '1.1.0',
     'agent.downloadUrl': '/download/CortezAgent.exe',
     'agent.intervalSeconds': 30,
     'agent.autoDuty': true,

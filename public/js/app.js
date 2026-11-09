@@ -276,6 +276,27 @@ async function initAgentGate() {
     });
   }
 
+  const autoBtn = document.getElementById('agent-auto-link');
+  if (autoBtn && !autoBtn.dataset.bound) {
+    autoBtn.dataset.bound = '1';
+    autoBtn.addEventListener('click', async () => {
+      autoBtn.disabled = true;
+      try {
+        const data = await post('/api/agent/code', {});
+        if (codeBox) codeBox.classList.remove('hidden');
+        if (codeValue) codeValue.textContent = data.code;
+        if (command) command.textContent = `CortezAgent.exe --link ${data.code}`;
+        if (expiry) expiry.textContent = 'صالح 30 دقيقة';
+        if (statusLine) statusLine.textContent = 'تم إرسال الرمز للتطبيق… وافق على فتح CortezAgent في المتصفح.';
+        location.href = `cortezagent://link/${data.code}`;
+      } catch (error) {
+        if (statusLine) statusLine.textContent = error.message || 'تعذّر إنشاء الرمز';
+      } finally {
+        setTimeout(() => { autoBtn.disabled = false; }, 4000);
+      }
+    });
+  }
+
   if (copyBtn && !copyBtn.dataset.bound) {
     copyBtn.dataset.bound = '1';
     copyBtn.addEventListener('click', async () => {
