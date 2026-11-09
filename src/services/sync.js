@@ -225,4 +225,9 @@ async function syncAllUsers({ delayMs = 150 } = {}) {
   return result;
 }
 
-module.exports = { syncUser, syncOnlineUsers, syncAllUsers, resolveRank };
+module.exports = {
+  resolveRank,
+  syncUser,
+  syncOnlineUsers,
+  syncAllUsers
+};

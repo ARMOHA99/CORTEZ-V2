@@ -119,8 +119,14 @@ router.get(
     if (config.discord.ownerIds.includes(String(oauthUser.id))) {
       rankKey = 'owner';
     } else if (member) {
-      const mappedRank = await getRankByDiscordRole(member.roles || []);
-      rankKey = mappedRank ? mappedRank.key : 'guest';
+      /* نفس منطق المزامنة: رول مربوط، ثم اسم رتبة قيادة (Boss / Under Boss) */
+      const resolved = await require('../services/sync').resolveRank({ discordId: String(oauthUser.id) }, member);
+      if (resolved) {
+        rankKey = resolved;
+      } else {
+        const mappedRank = await getRankByDiscordRole(member.roles || []);
+        rankKey = mappedRank ? mappedRank.key : 'guest';
+      }
     }
 
     const rank = await getRank(rankKey);
