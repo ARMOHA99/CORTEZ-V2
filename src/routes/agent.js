@@ -98,7 +98,7 @@ router.post(
     const stage = String(body.stage || '').slice(0, 40);
     const info = String(body.info || '').slice(0, 200);
     const version = String(body.version || '').slice(0, 20);
-    console.log(`[Agent] تقرير ${stage} v${version}: ${info}`);
+    console.log(`[Agent] تقرير ${stage} v${version} جهاز=${String(body.deviceId || '').slice(0, 40)}: ${info}`);
     try {
       const AgentDevice = require('../models/AgentDevice');
       const crypto = require('crypto');
