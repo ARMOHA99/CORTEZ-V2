@@ -90,6 +90,32 @@ router.post(
   })
 );
 
+/* تقرير حالة من التطبيق (إقلاع، انهيار، مرحلة) */
+router.post(
+  '/report',
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const stage = String(body.stage || '').slice(0, 40);
+    const info = String(body.info || '').slice(0, 200);
+    const version = String(body.version || '').slice(0, 20);
+    console.log(`[Agent] تقرير ${stage} v${version}: ${info}`);
+    try {
+      const AgentDevice = require('../models/AgentDevice');
+      const crypto = require('crypto');
+      if (body.token && /^[a-f0-9]{64}$/i.test(String(body.token))) {
+        const hash = crypto.createHash('sha256').update(String(body.token)).digest('hex');
+        await AgentDevice.updateOne(
+          { tokenHash: hash },
+          { $set: { lastDiag: `${stage}: ${info}`.slice(0, 200), lastSeenAt: new Date() } }
+        );
+      }
+    } catch (error) {
+      /* التسجيل فقط */
+    }
+    res.json({ ok: true });
+  })
+);
+
 /* إلغاء دوام بدأ من التطبيق بالخطأ */
 router.post(
   '/cancel-shift',

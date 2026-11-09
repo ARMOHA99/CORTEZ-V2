@@ -16,7 +16,7 @@ const DEFAULTS = {
   required: false,
   host: '185.239.175.27',
   port: 30120,
-  version: '1.4.0',
+  version: '1.5.0',
   downloadUrl: '/download/CortezAgent.exe',
   intervalSeconds: 30,
   autoDuty: true,
