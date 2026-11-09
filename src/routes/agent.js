@@ -34,6 +34,9 @@ router.get(
   '/status',
   requireAuth,
   asyncHandler(async (req, res) => {
+    /* لا كاش أبدًا: البوابة تعتمد على هذه القراءة لحظيًا */
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
     res.json(await agent.statusFor(req.user));
   })
 );

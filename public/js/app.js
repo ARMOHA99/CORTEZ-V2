@@ -214,7 +214,10 @@ let agentPoll = null;
 
 function hideAgentGate() {
   const gate = document.getElementById('agent-gate');
-  if (gate) gate.classList.add('hidden');
+  if (gate) {
+    gate.classList.add('hidden');
+    gate.style.display = 'none';
+  }
   if (agentPoll) {
     clearInterval(agentPoll);
     agentPoll = null;
@@ -223,36 +226,45 @@ function hideAgentGate() {
 
 function showAgentGate() {
   const gate = document.getElementById('agent-gate');
-  if (gate) gate.classList.remove('hidden');
+  if (gate) {
+    gate.classList.remove('hidden');
+    gate.style.display = 'flex';
+  }
 }
 
 async function initAgentGate() {
   const gate = document.getElementById('agent-gate');
   if (!gate) return true;
+
+  /*
+   * لا نُظهر البوابة إلا بعد ثلاث قراءات متتالية تؤكد أن الجهاز غير مرتبط.
+   * الهدف: لا وميض لحظة دخول الموقع أو تحديث الصفحة.
+   */
+  const checks = 3;
+  const gapMs = 1800;
+  const bootScreen = document.getElementById('boot-screen');
+  const holdBoot = () => { if (bootScreen) bootScreen.classList.remove('hidden'); };
+  const releaseBoot = () => { if (bootScreen) bootScreen.classList.add('hidden'); };
   let status = null;
-  try {
-    status = await get('/api/agent/status');
-  } catch (error) {
-    return true; /* لا نمنع الدخول لو تعذّر الفحص */
-  }
-  if (!status || !status.required) {
-    hideAgentGate();
-    return true;
-  }
-  /* تحقّق ثانٍ: نتجنب إظهار البوابة بسبب سباق لحظة الربط */
-  if (!status.linked) {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  for (let i = 0; i < checks; i += 1) {
+    let fresh = null;
     try {
-      const recheck = await get('/api/agent/status');
-      if (recheck && recheck.linked) {
-        hideAgentGate();
-        return true;
-      }
-      if (recheck) status = recheck;
+      fresh = await get('/api/agent/status?t=' + Date.now());
     } catch (error) {
-      /* نكمل بالحالة السابقة */
+      hideAgentGate();
+      releaseBoot();
+      return true; /* تعذّر الفحص: لا نمنع الدخول */
     }
+    if (!fresh || !fresh.required || fresh.linked) {
+      hideAgentGate();
+      releaseBoot();
+      return true;
+    }
+    status = fresh;
+    holdBoot();
+    if (i < checks - 1) await new Promise((resolve) => setTimeout(resolve, gapMs));
   }
+
   const target = document.getElementById('agent-target');
   const version = document.getElementById('agent-gate-version');
   const download = document.getElementById('agent-download');
@@ -329,6 +341,7 @@ async function initAgentGate() {
     });
   }
 
+  releaseBoot();
   showAgentGate();
   if (agentPoll) clearInterval(agentPoll);
   agentPoll = setInterval(async () => {
