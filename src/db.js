@@ -28,6 +28,21 @@ async function connectDB() {
     state.connected = true;
     state.mode = 'mongodb';
     console.log(`[DB] تم الاتصال بقاعدة البيانات: ${mongoose.connection.name}`);
+    /* تشخيص سريع: أعداد الأعضاء والدوام — يظهر في سجلات Render */
+    try {
+      const User = require('./models/User');
+      const Shift = require('./models/Shift');
+      const [total, inGuild, guests, blocked, shifts] = await Promise.all([
+        User.countDocuments({}),
+        User.countDocuments({ inGuild: true }),
+        User.countDocuments({ rank: 'guest' }),
+        User.countDocuments({ blocked: true }),
+        Shift.countDocuments({})
+      ]);
+      console.log(`[DB] الأعضاء: ${total} — داخل السيرفر: ${inGuild} — بلا رتبة: ${guests} — محظورون: ${blocked} — سجلات الدوام: ${shifts}`);
+    } catch (error) {
+      console.warn('[DB] تعذّر عدّ السجلات:', error.message);
+    }
     return mongoose.connection;
   } catch (error) {
     state.connected = false;
