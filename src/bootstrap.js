@@ -171,6 +171,33 @@ async function migrateShopOnlyRank() {
   try { require('./services/ranks').invalidate(); } catch (error) { /* ignore */ }
 }
 
+/* ترقية رقم إصدار التطبيق ورابطه في الإعدادات المحفوظة (وإلا يظل يظهر إصدار قديم) */
+async function migrateAgentSettings() {
+  const Setting = require('./models/Setting');
+  const defaults = settingsService.defaultSettings();
+  const row = await Setting.findOne({ key: 'agent.version' }).lean();
+  const stored = row && row.value ? String(row.value) : '';
+  const target = String(defaults['agent.version'] || '');
+  const cmp = (a, b) => {
+    const pa = a.split('.').map((n) => Number(n) || 0);
+    const pb = b.split('.').map((n) => Number(n) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
+      const d = (pa[i] || 0) - (pb[i] || 0);
+      if (d !== 0) return d;
+    }
+    return 0;
+  };
+  if (stored && cmp(stored, target) >= 0) return false;
+  await Setting.updateOne({ key: 'agent.version' }, { $set: { key: 'agent.version', value: target } }, { upsert: true });
+  await Setting.updateOne(
+    { key: 'agent.downloadUrl' },
+    { $set: { key: 'agent.downloadUrl', value: defaults['agent.downloadUrl'] } },
+    { upsert: true }
+  );
+  console.log(`[Seed] ترقية تطبيق الدوام: ${stored || '—'} → ${target}`);
+  return true;
+}
+
 async function seedSettings() {
   const Setting = require('./models/Setting');
   const defaults = settingsService.defaultSettings();
@@ -216,6 +243,7 @@ async function ensureSeed() {
   await migrateItemPermissions();
   await migrateShopOnlyRank();
   await seedSettings();
+  await migrateAgentSettings();
   await seedProducts();
   await seedWelcomeAnnouncement();
   const { goal, context } = await goalService.getCurrentGoal({ create: true });

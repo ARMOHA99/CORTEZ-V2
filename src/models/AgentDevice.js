@@ -17,6 +17,7 @@ const agentDeviceSchema = new mongoose.Schema(
     duty: { type: Boolean, default: false },
     /* آخر مرة ثبت فيها اتصال حقيقي بسيرفر اللعبة */
     verifiedAt: { type: Date, default: null },
+    lastDiag: { type: String, default: '', maxlength: 200 },
     revokedAt: { type: Date, default: null }
   },
   { timestamps: true }

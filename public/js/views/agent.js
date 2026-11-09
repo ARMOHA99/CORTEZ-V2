@@ -25,7 +25,10 @@ export async function render(root) {
       <div class="card">
         <div class="card-body">
           <h3 style="margin-top:0">حمّل التطبيق</h3>
-          <p class="muted">النسخة ${esc(status.version || '1.1.0')} • لا يحتاج صلاحية أدمين • يعمل مع تشغيل ويندوز</p>
+          <p class="muted">النسخة ${esc(status.version || '1.3.0')} • لا يحتاج صلاحية أدمين • يعمل مع تشغيل ويندوز</p>
+          ${(status.devices || []).some((d) => d.version && d.version !== status.version)
+            ? `<p class="pact-warning" style="margin:6px 0">عندك نسخة قديمة من التطبيق — نزّل الجديدة من الزر أعلاه وشغّلها، وستحدّث نفسها.</p>`
+            : ''}
           <a class="btn btn-primary" href="${esc(download)}" download>تحميل CortezAgent.exe</a>
           <ol class="muted" style="margin:14px 0 0;padding-inline-start:18px;font-size:13px;line-height:2">
             <li>شغّل الملف الذي نزّلته (تفتح نافذة صغيرة).</li>
@@ -57,7 +60,7 @@ export async function render(root) {
       <div class="card-head"><div><p class="eyebrow">DEVICES</p><h3>أجهزتي</h3></div></div>
       <div class="card-body" id="agent-devices">
         ${devices.length
-          ? devices.map((d) => `<div class="kv"><span>${esc(d.label || 'جهاز')} <span class="muted">${esc(d.platform || '')}</span></span><span class="${d.duty ? 'ok' : 'muted'}">${d.duty ? 'على الدوام' : d.online ? 'متصل' : 'غير متصل'}</span><span class="muted">${d.lastSeenAt ? timeAgo(d.lastSeenAt) : 'لم ينبض بعد'}</span><button class="btn btn-ghost btn-sm" data-unlink="${esc(d.id)}">فصل</button></div>`).join('')
+          ? devices.map((d) => `<div class="kv"><span>${esc(d.label || 'جهاز')} <span class="muted">${esc(d.platform || '')}</span> <span class="muted">v${esc(d.version || '?')}</span></span><span class="${d.duty ? 'ok' : 'muted'}">${d.duty ? 'على الدوام' : d.online ? 'متصل' : 'غير متصل'}</span><span class="muted">${d.lastSeenAt ? timeAgo(d.lastSeenAt) : 'لم ينبض بعد'}</span><button class="btn btn-ghost btn-sm" data-unlink="${esc(d.id)}">فصل</button></div>${d.diag ? `<p class="muted" style="font-size:11.5px;margin:2px 0 8px">آخر فحص: ${esc(d.diag)}</p>` : ''}`).join('')
           : '<p class="muted">لا يوجد جهاز مرتبط بعد.</p>'}
       </div>
     </div>`;

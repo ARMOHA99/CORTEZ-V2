@@ -16,7 +16,7 @@ const DEFAULTS = {
   required: false,
   host: '185.239.175.27',
   port: 30120,
-  version: '1.2.0',
+  version: '1.3.0',
   downloadUrl: '/download/CortezAgent.exe',
   intervalSeconds: 30,
   autoDuty: true,
@@ -83,6 +83,7 @@ function serializeDevice(device, c) {
     online,
     duty: online && Boolean(device.duty),
     lastSeenAt: device.lastSeenAt || null,
+    diag: device.lastDiag || '',
     createdAt: device.createdAt || null
   };
 }
@@ -224,7 +225,7 @@ async function syncShift(userId, onDuty) {
 }
 
 /* النبضة من التطبيق */
-async function heartbeat({ token, connected = false, verified = false, version = '' }, ipHash) {
+async function heartbeat({ token, connected = false, verified = false, version = '', diag = '' }, ipHash) {
   if (!mongooseReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
   const AgentDevice = require('../models/AgentDevice');
   if (!token || !/^[a-f0-9]{64}$/i.test(String(token))) throw httpError(401, 'رمز الجهاز غير صحيح', 'BAD_TOKEN');
@@ -238,6 +239,7 @@ async function heartbeat({ token, connected = false, verified = false, version =
   const onDuty = (connected === true || connected === 'true' || connected === 1) && (verified === true || verified === 'true' || verified === 1);
   device.duty = onDuty;
   if (onDuty) device.verifiedAt = new Date();
+  if (diag) device.lastDiag = String(diag).slice(0, 200);
   if (version) device.appVersion = String(version).slice(0, 40);
   if (ipHash) device.lastIpHash = ipHash;
   await device.save();
@@ -253,6 +255,7 @@ async function heartbeat({ token, connected = false, verified = false, version =
   return {
     ok: true,
     autoDuty: c.autoDuty,
+    diag: device.lastDiag || '',
     intervalSeconds: c.intervalSeconds,
     host: c.host,
     port: c.port,
