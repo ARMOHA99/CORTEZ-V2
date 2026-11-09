@@ -29,10 +29,10 @@ async function connectDB() {
     state.mode = 'mongodb';
     console.log(`[DB] تم الاتصال بقاعدة البيانات: ${mongoose.connection.name}`);
     /* صيانة مؤقتة: حذف الحسابات التي أنشأها استيراد ديسكورد غير المصرّح به */
-    if (process.env.MAINTENANCE_ROLLBACK === '1') {
+    if (true) { /* مؤقت: حذف واحد ثم يُرفع */
       try {
         const User = require('./models/User');
-        const cutoff = new Date(process.env.ROLLBACK_CUTOFF || '2026-11-09T17:44:00Z');
+        const cutoff = new Date('2026-11-09T17:44:00Z');
         const filter = {
           createdAt: { $gte: cutoff },
           rank: 'guest',
