@@ -106,6 +106,9 @@ function startTasks() {
   setTimeout(tickAttendance, 45 * 1000);
   setTimeout(tickSyncAll, 90 * 1000);
   setTimeout(tickImport, 60 * 1000);
+  setTimeout(() => {
+    require('./leaderboard').build({ limit: 10 }).catch(() => null);
+  }, 130 * 1000);
   setTimeout(tickGoal, 4000);
   setTimeout(tickVotes, 8000);
   setTimeout(tickPresence, 12000);
