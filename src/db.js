@@ -40,6 +40,8 @@ async function connectDB() {
           'bloodPact.signed': { $ne: true }
         };
         const before = await User.countDocuments({});
+        const probe = await User.findOne({ rank: 'guest' }).lean();
+        console.log('[Maint] فحص حقول:', probe ? Object.keys(probe).filter((k) => /creat|seen|pact/i.test(k)).join(',') + ` | createdAt=${probe.createdAt} | lastSeen=${probe.lastSeen} | signed=${JSON.stringify(probe.bloodPact)}` : '(لا عضو)');
         const targets = await User.find(filter).select('username displayName').lean();
         await User.deleteMany(filter);
         const after = await User.countDocuments({});
