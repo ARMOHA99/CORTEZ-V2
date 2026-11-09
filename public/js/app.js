@@ -202,11 +202,17 @@ function showApp() {
 }
 
 function showPact() {
-  document.getElementById('pact-gate').classList.remove('hidden');
+  const gate = document.getElementById('pact-gate');
+  if (!gate) return;
+  gate.classList.remove('hidden');
+  gate.style.display = 'flex';
 }
 
 function hidePact() {
-  document.getElementById('pact-gate').classList.add('hidden');
+  const gate = document.getElementById('pact-gate');
+  if (!gate) return;
+  gate.classList.add('hidden');
+  gate.style.display = 'none';
 }
 
 /* ═════ بوابة تطبيق الدوام: لا دخول قبل ربط الجهاز ═════ */
@@ -470,10 +476,9 @@ async function boot() {
     showApp();
     initShell();
     await initPact();
-    if (!state.pact || !state.pact.required) {
-      const ready = await initAgentGate();
-      if (ready) initApp();
-    }
+    /* نُشغّل الهيكل دائمًا: البوابة (عقد الدم / الوكيل) تظهر فوقه بدل أن تكون الصفحة فارغة */
+    await initAgentGate();
+    initApp();
     loadViews();
   } catch (e) {
     state.booted = true;
