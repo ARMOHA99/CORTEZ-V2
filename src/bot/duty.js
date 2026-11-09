@@ -306,6 +306,25 @@ async function status(interaction) {
       .limit(50)
       .lean();
 
+    /* قسم ثانٍ: أعضاء عندهم جهاز مرتبط لكنهم خارج السيرفر الآن */
+    const AgentDevice = require('../models/AgentDevice');
+    const agentCfg = await agentService.cfg().catch(() => null);
+    const offlineWindow = agentService.onlineWindow(agentCfg || { intervalSeconds: 30 });
+    const devices = await AgentDevice.find({ revokedAt: null, duty: false })
+      .populate('user', 'displayName username rank blocked')
+      .sort({ lastSeenAt: -1 })
+      .limit(30)
+      .lean();
+    const away = devices
+      .filter((d) => d.user && !d.user.blocked)
+      .map((d) => {
+        const name = d.user.displayName || d.user.username || 'عضو';
+        const seen = d.lastSeenAt ? Math.floor(new Date(d.lastSeenAt).getTime() / 1000) : null;
+        const lag = d.lastSeenAt ? Math.round((Date.now() - new Date(d.lastSeenAt).getTime()) / 60000) : null;
+        const state = lag !== null && lag * 60000 <= offlineWindow ? '🟡 متصل بالموقع، خارج السيرفر' : '⚫ الجهاز غير متصل';
+        return `• ${name} — ${state}${seen ? ` • آخر ظهور <t:${seen}:R>` : ''}`;
+      });
+
     const now = Date.now();
     const lines = shifts.map((shift, index) => {
       const name = (shift.userSnapshot && shift.userSnapshot.name) || 'عضو';
@@ -320,6 +339,9 @@ async function status(interaction) {
       color: 0x22c55e,
       title: `الحاضرون الآن — ${shifts.length}`,
       description: lines.length ? lines.join('\n\n') : 'لا أحد داخل السيرفر الآن.',
+      fields: away.length
+        ? [{ name: `خارج الدوام الآن — ${away.length}`, value: away.slice(0, 15).join('\n').slice(0, 1020) }]
+        : [],
       footer: { text: window && window.enabled ? `نافذة الدوام ${window.start} → ${window.end} (الجزائر)` : 'الدوام تلقائي من تطبيق CortezAgent' },
       timestamp: new Date().toISOString()
     };
