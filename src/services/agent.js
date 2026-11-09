@@ -104,13 +104,21 @@ async function statusFor(user) {
   }
   const devices = await devicesOf(user, c);
   const online = devices.some((device) => device.online);
+  if (!devices.length && user) {
+    const total = await require('../models/AgentDevice').countDocuments({ user: user._id }).catch(() => -1);
+    console.log(`[Agent] بوابة: ${user.displayName || user.username} بلا أجهزة نشطة (إجمالي السجلات ${total})`);
+  }
   const exempt = isExempt(user, c);
   const required = c.enabled && c.required && !exempt;
+  const w = await dutyWindow();
+  const anyDuty = devices.some((d) => d.duty);
   return {
     enabled: c.enabled,
     required,
     exempt,
     linked: devices.length > 0,
+    window: { enabled: w.enabled, start: w.start, end: w.end, isOpen: insideWindow(w, user ? user.rank : '') },
+    waitingWindow: Boolean(w.enabled && devices.length > 0 && !insideWindow(w, user ? user.rank : '')),
     online,
     duty: devices.some((device) => device.duty),
     devices,
@@ -165,18 +173,36 @@ async function link({ code, deviceId, label, platform, version }, ipHash) {
   if (row.expiresAt.getTime() < Date.now()) throw httpError(400, 'انتهت صلاحية الرمز. اطلب رمزًا جديدًا.', 'CODE_EXPIRED');
 
   const token = crypto.randomBytes(32).toString('hex');
-  const device = await AgentDevice.create({
-    user: row.user,
-    deviceId: String(deviceId || '').slice(0, 120),
+  const deviceKey = String(deviceId || '').slice(0, 120);
+  const fields = {
     tokenHash: hashToken(token),
     label: String(label || 'جهاز ويندوز').slice(0, 120),
     platform: String(platform || 'windows').slice(0, 40),
     appVersion: String(version || '').slice(0, 40),
     lastSeenAt: new Date(),
     lastIpHash: ipHash || ''
-  });
+  };
+
+  /* نفس الجهاز يعيد الربط: نحدّث سجله بدل إنشاء جهاز جديد */
+  let device = deviceKey
+    ? await AgentDevice.findOneAndUpdate(
+        { user: row.user, deviceId: deviceKey },
+        { $set: { ...fields, revokedAt: null } },
+        { new: true }
+      )
+    : null;
+  if (!device) {
+    device = await AgentDevice.create({ user: row.user, deviceId: deviceKey, ...fields });
+  }
+
+  /* إبقاء أحدث ٥ أجهزة فقط لكل عضو */
+  const extra = await AgentDevice.find({ user: row.user }).sort({ createdAt: -1 }).skip(5).select('_id').lean();
+  if (extra.length) {
+    await AgentDevice.deleteMany({ _id: { $in: extra.map((d) => d._id) } }).catch(() => null);
+  }
   row.usedAt = new Date();
   await row.save();
+  console.log(`[Agent] ربط جهاز «${fields.label}» للعضو ${String(row.user).slice(-6)} (${deviceKey.slice(0, 18)})`);
 
   const c = await cfg();
   return {
@@ -319,9 +345,16 @@ async function heartbeat({ token, connected = false, verified = false, version =
   const nowDuty = Boolean(device.duty);
   /* نزامن دائمًا: يفتح عند الدخول، ويغلق أو يلغي أي دوام عالق عند الخروج */
   if (c.autoDuty && (nowDuty || wasDuty || true)) {
-    await syncShift(device.user, nowDuty).catch((error) => {
+    try {
+      const result = await syncShift(device.user, nowDuty);
+      if (result && (result.outsideWindow || result.closedByWindow)) {
+        const w = await dutyWindow();
+        device.lastDiag = `داخل السيرفر لكن خارج نافذة الدوام (${w.start} → ${w.end})`;
+        await device.save().catch(() => null);
+      }
+    } catch (error) {
       console.error('[Agent] تعذّر تحديث الدوام تلقائيًا:', error.message);
-    });
+    }
   }
   return {
     ok: true,

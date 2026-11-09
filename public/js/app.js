@@ -239,10 +239,28 @@ async function initAgentGate() {
     hideAgentGate();
     return true;
   }
+  /* تحقّق ثانٍ: نتجنب إظهار البوابة بسبب سباق لحظة الربط */
+  if (!status.linked) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const recheck = await get('/api/agent/status');
+      if (recheck && recheck.linked) {
+        hideAgentGate();
+        return true;
+      }
+      if (recheck) status = recheck;
+    } catch (error) {
+      /* نكمل بالحالة السابقة */
+    }
+  }
   const target = document.getElementById('agent-target');
   const version = document.getElementById('agent-gate-version');
   const download = document.getElementById('agent-download');
-  if (target) target.textContent = `يتحقق من الاتصال بـ ${status.target || ''} • نبضة كل ${status.intervalSeconds || 30} ثانية`;
+  if (target) {
+    target.textContent = status.waitingWindow
+      ? `جهازك مربوط ✓ — لكن الدوام يُحتسب فقط داخل النافذة (${status.window?.start || '—'} → ${status.window?.end || '—'})`
+      : `يتحقق من الاتصال بـ ${status.target || ''} • نبضة كل ${status.intervalSeconds || 30} ثانية`;
+  }
   if (version) version.textContent = 'V' + (status.version || '1.0.0');
   if (download && status.downloadUrl) download.setAttribute('href', status.downloadUrl);
 

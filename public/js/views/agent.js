@@ -42,6 +42,7 @@ export async function render(root) {
         <div class="card-body">
           <h3 style="margin-top:0">ربط الجهاز</h3>
           <p class="muted">حالة الربط: <strong class="${status.linked ? 'ok' : ''}">${status.linked ? 'مرتبط' : 'غير مرتبط'}</strong>${status.duty ? ' • على الدوام الآن' : ''}</p>
+          ${status.waitingWindow ? `<p class="pact-warning" style="margin:6px 0">داخل السيرفر لكن خارج نافذة الدوام (${esc(status.window?.start || '')} → ${esc(status.window?.end || '')}) — لا يُحتسب دوام قبل فتح النافذة.</p>` : ''}
           <div class="adm-actions">
             <button class="btn btn-primary" type="button" id="agent-auto">ربط جهازي الآن</button>
             <button class="btn btn-ghost" type="button" id="agent-manual">رمز ربط يدوي</button>
