@@ -284,7 +284,62 @@ async function handleButton(interaction) {
 }
 
 
-/* ═════ /duty: قائمة من هو داخل السيرفر الآن ═════ */
+/* ═════ /duty: رسالة حالة حيّة تتحدّث كل دقيقة ═════ */
+
+/* بناء الإمبد من قاعدة البيانات (يُستخدم عند الأمر وعند التحديث الدوري) */
+async function buildEmbed() {
+  const agentService = require('../services/agent');
+  const Shift = require('../models/Shift');
+  const AgentDevice = require('../models/AgentDevice');
+  const window = await agentService.windowInfo().catch(() => null);
+  const agentCfg = await agentService.cfg().catch(() => null);
+  const onlineWindow = agentService.onlineWindow(agentCfg || { intervalSeconds: 30 });
+
+  const shifts = await Shift.find({ status: { $in: ['active', 'paused'] }, kind: 'shift' })
+    .sort({ startAt: 1 })
+    .limit(40)
+    .lean();
+
+  const now = Date.now();
+  const lines = shifts.map((shift, index) => {
+    const name = (shift.userSnapshot && shift.userSnapshot.name) || 'عضو';
+    const rank = (shift.userSnapshot && shift.userSnapshot.rank) || '';
+    const since = Math.floor(new Date(shift.startAt).getTime() / 1000);
+    const mins = Math.max(0, Math.round((now - new Date(shift.startAt).getTime()) / 60000));
+    const state = shift.status === 'paused' ? '⏸ استراحة' : '🟢 داخل السيرفر';
+    return `**${index + 1}.** ${name}${rank ? ` — \`${rank}\`` : ''}\n${state} • من <t:${since}> • ${formatMinutes(mins)}`;
+  });
+
+  const devices = await AgentDevice.find({ revokedAt: null, duty: false })
+    .populate('user', 'displayName username blocked')
+    .sort({ lastSeenAt: -1 })
+    .limit(40)
+    .lean();
+  const away = devices
+    .filter((d) => d.user && !d.user.blocked)
+    .map((d) => {
+      const name = d.user.displayName || d.user.username || 'عضو';
+      const seen = d.lastSeenAt ? Math.floor(new Date(d.lastSeenAt).getTime() / 1000) : null;
+      const lag = d.lastSeenAt ? Date.now() - new Date(d.lastSeenAt).getTime() : null;
+      const state = lag !== null && lag <= onlineWindow ? '🟡 متصل بالموقع، خارج السيرفر' : '⚫ الجهاز غير متصل';
+      return `• ${name} — ${state}${seen ? ` • آخر ظهور <t:${seen}:R>` : ''}`;
+    });
+
+  const updatedAt = Math.floor(now / 1000);
+  return {
+    color: 0x22c55e,
+    title: `الحاضرون الآن — ${shifts.length}`,
+    description: lines.length ? lines.join('\n\n') : 'لا أحد داخل السيرفر الآن.',
+    fields: away.length
+      ? [{ name: `خارج الدوام الآن — ${away.length}`, value: away.slice(0, 15).join('\n').slice(0, 1020) }]
+      : [],
+    footer: {
+      text: `${window && window.enabled ? `نافذة الدوام ${window.start} → ${window.end} (الجزائر) • ` : ''}آخر تحديث`
+    },
+    timestamp: new Date(now).toISOString()
+  };
+}
+
 async function status(interaction) {
   try {
     const settings = await settingsService.loadAll().catch(() => ({}));
@@ -297,55 +352,34 @@ async function status(interaction) {
     }
     await interaction.deferReply();
 
-    const Shift = require('../models/Shift');
-    const agentService = require('../services/agent');
-    const window = await agentService.windowInfo().catch(() => null);
-
-    const shifts = await Shift.find({ status: { $in: ['active', 'paused'] }, kind: 'shift' })
-      .sort({ startAt: 1 })
-      .limit(50)
-      .lean();
-
-    /* قسم ثانٍ: أعضاء عندهم جهاز مرتبط لكنهم خارج السيرفر الآن */
-    const AgentDevice = require('../models/AgentDevice');
-    const agentCfg = await agentService.cfg().catch(() => null);
-    const offlineWindow = agentService.onlineWindow(agentCfg || { intervalSeconds: 30 });
-    const devices = await AgentDevice.find({ revokedAt: null, duty: false })
-      .populate('user', 'displayName username rank blocked')
-      .sort({ lastSeenAt: -1 })
-      .limit(30)
-      .lean();
-    const away = devices
-      .filter((d) => d.user && !d.user.blocked)
-      .map((d) => {
-        const name = d.user.displayName || d.user.username || 'عضو';
-        const seen = d.lastSeenAt ? Math.floor(new Date(d.lastSeenAt).getTime() / 1000) : null;
-        const lag = d.lastSeenAt ? Math.round((Date.now() - new Date(d.lastSeenAt).getTime()) / 60000) : null;
-        const state = lag !== null && lag * 60000 <= offlineWindow ? '🟡 متصل بالموقع، خارج السيرفر' : '⚫ الجهاز غير متصل';
-        return `• ${name} — ${state}${seen ? ` • آخر ظهور <t:${seen}:R>` : ''}`;
-      });
-
-    const now = Date.now();
-    const lines = shifts.map((shift, index) => {
-      const name = (shift.userSnapshot && shift.userSnapshot.name) || 'عضو';
-      const rank = (shift.userSnapshot && shift.userSnapshot.rank) || '';
-      const since = Math.floor(new Date(shift.startAt).getTime() / 1000);
-      const mins = Math.max(0, Math.round((now - new Date(shift.startAt).getTime()) / 60000));
-      const state = shift.status === 'paused' ? '⏸ استراحة' : '🟢 داخل السيرفر';
-      return `**${index + 1}.** ${name}${rank ? ` — \`${rank}\`` : ''}\n${state} • من <t:${since}> • ${formatMinutes(mins)}`;
-    });
-
-    const embed = {
-      color: 0x22c55e,
-      title: `الحاضرون الآن — ${shifts.length}`,
-      description: lines.length ? lines.join('\n\n') : 'لا أحد داخل السيرفر الآن.',
-      fields: away.length
-        ? [{ name: `خارج الدوام الآن — ${away.length}`, value: away.slice(0, 15).join('\n').slice(0, 1020) }]
-        : [],
-      footer: { text: window && window.enabled ? `نافذة الدوام ${window.start} → ${window.end} (الجزائر)` : 'الدوام تلقائي من تطبيق CortezAgent' },
-      timestamp: new Date().toISOString()
-    };
+    const embed = await buildEmbed();
+    /* رسالة واحدة حيّة لكل قناة: لو فيه رسالة سابقة نحدّثها بدل تكرار الرسائل */
+    const DutyStatus = require('../models/DutyStatus');
+    const existing = await DutyStatus.findOne({ channelId: interaction.channelId }).lean();
+    let messageId = null;
+    if (existing) {
+      try {
+        const channel = interaction.channel || (await interaction.client.channels.fetch(interaction.channelId));
+        const message = await channel.messages.fetch(existing.messageId);
+        await message.edit({ embeds: [embed] });
+        messageId = existing.messageId;
+      } catch (error) {
+        await DutyStatus.deleteOne({ channelId: interaction.channelId }).catch(() => null);
+      }
+    }
     await interaction.editReply({ embeds: [embed] });
+    if (!messageId) {
+      const message = await interaction.fetchReply().catch(() => null);
+      if (message && message.id) {
+        await DutyStatus.updateOne(
+          { channelId: interaction.channelId },
+          { $set: { channelId: interaction.channelId, messageId: message.id, guildId: interaction.guildId || '', lastRefreshAt: new Date(), failedCount: 0 } },
+          { upsert: true }
+        ).catch(() => null);
+      }
+    } else {
+      await DutyStatus.updateOne({ channelId: interaction.channelId }, { $set: { lastRefreshAt: new Date() } }).catch(() => null);
+    }
     return null;
   } catch (error) {
     console.error('[Bot] /duty status:', error);
@@ -358,9 +392,35 @@ async function status(interaction) {
   }
 }
 
+/* تحديث كل رسائل الحالة الحيّة (تُنادى كل 45 ثانية من البوت) */
+async function refreshAll(client) {
+  if (!client || !dbReady()) return 0;
+  const DutyStatus = require('../models/DutyStatus');
+  const rows = await DutyStatus.find({}).limit(10).lean();
+  if (!rows.length) return 0;
+  const embed = await buildEmbed();
+  let updated = 0;
+  for (const row of rows) {
+    try {
+      const channel = client.channels.cache.get(row.channelId) || (await client.channels.fetch(row.channelId));
+      if (!channel || !channel.messages) throw new Error('قناة غير متاحة');
+      const message = await channel.messages.fetch(row.messageId);
+      await message.edit({ embeds: [embed] });
+      await DutyStatus.updateOne({ _id: row._id }, { $set: { lastRefreshAt: new Date(), failedCount: 0 } }).catch(() => null);
+      updated += 1;
+    } catch (error) {
+      const failed = (row.failedCount || 0) + 1;
+      /* الرسالة انحذفت أو القناة اختفت: نوقف المحاولة */
+      if (failed >= 3) await DutyStatus.deleteOne({ _id: row._id }).catch(() => null);
+      else await DutyStatus.updateOne({ _id: row._id }, { $set: { failedCount: failed } }).catch(() => null);
+    }
+  }
+  return updated;
+}
+
 function dbReady() {
   const mongoose = require('mongoose');
   return mongoose.connection.readyState === 1;
 }
 
-module.exports = { status, handleButton, panelPayload, postPanel, formatMinutes };
+module.exports = { status, refreshAll, buildEmbed, handleButton, panelPayload, postPanel, formatMinutes };

@@ -154,6 +154,11 @@ function startBot() {
         /* ignore */
       }
       await registerCommands();
+      /* تحديث رسائل حالة الدوام كل 45 ثانية */
+      setInterval(() => {
+        dutyBot.refreshAll(readyClient).catch((error) => console.error('[Bot] duty refresh:', error.message));
+      }, 45 * 1000);
+      dutyBot.refreshAll(readyClient).catch(() => null);
     });
 
     client.on(Events.InteractionCreate, async (interaction) => {
