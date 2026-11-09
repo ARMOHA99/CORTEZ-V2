@@ -29,24 +29,6 @@ async function connectDB() {
     state.mode = 'mongodb';
     console.log(`[DB] تم الاتصال بقاعدة البيانات: ${mongoose.connection.name}`);
     /* صيانة مؤقتة: حذف الحسابات التي أنشأها استيراد ديسكورد غير المصرّح به */
-    if (true) { /* مؤقت: حذف واحد ثم يُرفع */
-      try {
-        const User = require('./models/User');
-        const cutoff = new Date('2026-11-09T17:44:00Z');
-        const protect = ['851001350925451284', '905438798962364487'];
-        const created = await User.countDocuments({ createdAt: { $gte: cutoff } });
-        const filter = { createdAt: { $gte: cutoff }, discordId: { $nin: protect } };
-        const targets = await User.find(filter).select('username displayName createdAt').lean();
-        console.log(`[Maint] أُنشئ بعد القطع: ${created} — سيُحذف: ${targets.length} — عيّنة: ${targets.slice(0, 6).map((t) => t.username).join(', ') || '—'}`);
-        if (targets.length && targets.length <= created) {
-          await User.deleteMany(filter);
-        }
-        console.log(`[Maint] الإجمالي بعد الحذف: ${await User.countDocuments({})}`);
-      } catch (error) {
-        console.error('[Maint] فشل الحذف:', error.message);
-      }
-    }
-
     /* تشخيص سريع: أعداد الأعضاء والدوام — يظهر في سجلات Render */
     try {
       const User = require('./models/User');
