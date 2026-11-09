@@ -308,7 +308,8 @@ function joinDayKey(user, c) {
   const signed = user.bloodPact && user.bloodPact.signed ? user.bloodPact.signedAt : null;
   const joined = signed || user.createdAt;
   if (!joined) return '';
-  return dateKeyNow(new Date(joined), c);
+  /* التاريخ الميلادي ليوم الدخول (بدون إزاحة بداية الدوام ١٠ص) */
+  return time.dayKey(new Date(joined), tz(), 0);
 }
 
 async function isExempt(user, c, endDate) {
