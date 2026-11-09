@@ -135,8 +135,10 @@ router.get(
       return res.redirect('/?error=no_role&seen=' + (member ? (member.roles || []).length : 'x'));
     }
 
-    /* اسم حساب ديسكورد (لا لقب السيرفر) — أسماء السيرفر تتغير ولا نريدها تظهر في الموقع */
+    /* الاسم المعتمد للعرض: لقب السيرفر (nick) لأن السيرفر يعتمد أسماء موحّدة */
+    const memberNick = (member && member.nick) || '';
     const displayName =
+      memberNick ||
       oauthUser.global_name ||
       oauthUser.username ||
       (existing && existing.displayName) ||
@@ -145,6 +147,7 @@ router.get(
     const update = {
       username: oauthUser.username || '',
       globalName: oauthUser.global_name || '',
+      nick: memberNick,
       displayName,
       avatar: oauthUser.avatar || '',
       discriminator: oauthUser.discriminator || '0',

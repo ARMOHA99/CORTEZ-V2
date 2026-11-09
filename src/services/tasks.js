@@ -55,7 +55,10 @@ async function tickSync() {
 
 async function tickSyncAll() {
   try {
-    await syncService.syncAllUsers();
+    const out = await syncService.syncAllUsers();
+    if (out && out.total) {
+      console.log(`[Tasks] مزامنة الأسماء: ${out.renamed || 0} اسم محدّث من ${out.total} عضو (فشل ${out.failed || 0})`);
+    }
   } catch (error) {
     console.error('[Tasks] sync-all:', error.message);
   }

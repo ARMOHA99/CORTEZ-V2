@@ -6,6 +6,13 @@ function mongooseReady() {
   return mongoose.connection.readyState === 1;
 }
 
+/* رابط صورة العضو من ديسكورد (كانت الصفحة تبني الرابط بمعرّف قاعدة البيانات فيفشل التحميل) */
+function avatarUrlOf(user) {
+  if (!user || !user.avatar || !user.discordId) return '';
+  const ext = String(user.avatar).startsWith('a_') ? 'gif' : 'png';
+  return `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.${ext}?size=128`;
+}
+
 async function build({ limit = 20, weekKey = null } = {}) {
   if (!mongooseReady()) return { weekKey: weekKey || '', items: [], metrics: [] };
   const User = require('../models/User');
@@ -16,7 +23,7 @@ async function build({ limit = 20, weekKey = null } = {}) {
 
   const [users, dutyRows, penaltyRows, operations, ranks] = await Promise.all([
     User.find({ blocked: false, inGuild: true, rank: { $ne: 'guest' } })
-      .select('displayName username avatar rank stats')
+      .select('discordId nick displayName globalName username avatar rank stats')
       .lean(),
     Shift.aggregate([
       { $match: { kind: 'shift', weekKey: targetWeek, status: 'closed' } },
@@ -56,8 +63,10 @@ async function build({ limit = 20, weekKey = null } = {}) {
     const rank = rankMap.get(user.rank);
     return {
       _id: user._id,
-      name: user.displayName || user.username || 'عضو',
+      name: user.nick || user.displayName || user.globalName || user.username || 'عضو',
       avatar: user.avatar || '',
+      discordId: user.discordId || '',
+      avatarUrl: avatarUrlOf(user),
       rank: user.rank,
       rankName: rank ? rank.name : user.rank,
       rankColor: rank ? rank.color : '#9b9296',
@@ -73,6 +82,53 @@ async function build({ limit = 20, weekKey = null } = {}) {
       activeDays: activeDays.size
     };
   });
+
+  /* احتياط: لو ما ظهر أحد (مثلاً inGuild لم يُحدَّث بعد) نعرض كل الأعضاء المعتمدين */
+  if (!items.length) {
+    const fallbackUsers = await User.find({ blocked: false, rank: { $ne: 'guest' } })
+      .select('nick displayName globalName username avatar rank')
+      .lean();
+    for (const user of fallbackUsers) {
+      const rank = rankMap.get(user.rank);
+      items.push({
+        _id: user._id,
+        name: user.nick || user.displayName || user.globalName || user.username || 'عضو',
+        avatar: user.avatar || '',
+        discordId: user.discordId || '',
+        avatarUrl: avatarUrlOf(user),
+        rank: user.rank,
+        rankName: rank ? rank.name : user.rank,
+        rankColor: rank ? rank.color : '#9b9296',
+        rankIcon: rank ? rank.icon : '◆',
+        level: rank ? rank.level : 0,
+        minutes: 0, shifts: 0, penaltyMinutes: 0, operations: 0, wins: 0, losses: 0, score: 0, activeDays: 0
+      });
+    }
+    console.log(`[Leaderboard] لا أحد في فلتر الدوام — استخدمت ${items.length} عضوًا احتياطيًا`);
+  }
+  /* طبقة ثالثة: لو ما زال فارغًا (الكل guest) نعرض غير المحظورين */
+  if (!items.length) {
+    const anyone = await User.find({ blocked: false }).select('discordId nick displayName globalName username avatar rank').lean();
+    for (const user of anyone) {
+      const rank = rankMap.get(user.rank);
+      items.push({
+        _id: user._id,
+        name: user.nick || user.displayName || user.globalName || user.username || 'عضو',
+        avatar: user.avatar || '',
+        discordId: user.discordId || '',
+        avatarUrl: avatarUrlOf(user),
+        rank: user.rank,
+        rankName: rank ? rank.name : user.rank,
+        rankColor: rank ? rank.color : '#9b9296',
+        rankIcon: rank ? rank.icon : '◆',
+        level: rank ? rank.level : 0,
+        minutes: 0, shifts: 0, penaltyMinutes: 0, operations: 0, wins: 0, losses: 0, score: 0, activeDays: 0
+      });
+    }
+    console.log(`[Leaderboard] لا أحد في الفلتر الأساسي — عرضت ${items.length} عضوًا مسجّلًا`);
+  }
+  const nameless = items.filter((item) => !item.name || item.name === 'عضو').length;
+  if (nameless) console.log(`[Leaderboard] ${nameless} عضو بلا اسم معروف (الأسبوع ${targetWeek})`);
 
   items.sort((a, b) => b.score - a.score || b.wins - a.wins || b.minutes - a.minutes);
   const ranked = items.slice(0, Math.max(1, Math.min(100, Number(limit) || 20))).map((item, index) => ({

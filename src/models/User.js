@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
     username: { type: String, default: '', trim: true },
     displayName: { type: String, default: '', trim: true },
     globalName: { type: String, default: '', trim: true },
+    nick: { type: String, default: '', trim: true }, /* لقب السيرفر في ديسكورد — الاسم المعتمد للعرض */
     avatar: { type: String, default: '' },
     discriminator: { type: String, default: '0' },
     roles: { type: [String], default: [] },
@@ -85,7 +86,7 @@ userSchema.virtual('avatarUrl').get(function avatarUrl() {
 });
 
 userSchema.virtual('name').get(function name() {
-  return this.displayName || this.globalName || this.username || 'عضو';
+  return this.nick || this.displayName || this.globalName || this.username || 'عضو';
 });
 
 module.exports = mongoose.model('User', userSchema);
