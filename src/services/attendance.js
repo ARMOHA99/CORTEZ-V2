@@ -302,6 +302,13 @@ function snapshot(user) {
   };
 }
 
+/* يوم انضمام العضو (أول يوم يُحسب عليه الدوام) — الغياب لا يُحسب قبل هذا اليوم */
+function joinDayKey(user, c) {
+  const joined = user.joinedGuildAt || user.createdAt;
+  if (!joined) return '';
+  return dateKeyNow(new Date(joined), c);
+}
+
 async function isExempt(user, c, endDate) {
   if (c.exemptRanks.includes(user.rank)) return 'exempt';
   if (user.leaveUntil && new Date(user.leaveUntil).getTime() >= endDate.getTime()) return 'leave';
@@ -419,9 +426,14 @@ async function evaluateDate(dateKey, { force = false } = {}) {
     const uid = String(user._id);
     const current = byUser.get(uid);
     const minutes = minutesOf.get(uid) || 0;
+    const joined = joinDayKey(user, c);
+    /* لا غياب على أي يوم قبل دخول العضو الموقع */
+    if (joined && key < joined) continue;
     const exempt = await isExempt(user, c, win.end);
     let status = 'absent';
     if (exempt) status = exempt;
+    /* يوم الدخول نفسه لا يُحسب غيابًا — يبدأ الاحتساب من اليوم التالي */
+    else if (joined && key === joined && minutes < c.minMinutes) status = 'exempt';
     else if (minutes >= c.minMinutes) status = 'present';
 
     if (current) {
@@ -881,7 +893,60 @@ async function warningsList(filter = {}) {
   return Warning.find(query).sort({ issuedAt: -1 }).limit(Number(filter.limit) || 60).lean();
 }
 
+/* ─────────── إصلاح: غيابات محسوبة قبل انضمام العضو ─────────── */
+async function repairPreJoin({ apply = true } = {}) {
+  if (!mongooseReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+  const c = await cfg();
+  const User = require('../models/User');
+  const AttendanceDay = require('../models/AttendanceDay');
+  const Warning = require('../models/Warning');
+
+  const users = await User.find({}).select('joinedGuildAt createdAt displayName username rank discordId').lean();
+  let removedDays = 0;
+  let clearedWarnings = 0;
+  const touched = [];
+
+  for (const user of users) {
+    const joinKey = joinDayKey(user, c);
+    if (!joinKey) continue;
+    const stale = await AttendanceDay.find({
+      user: user._id,
+      dateKey: { $lt: joinKey },
+      status: 'absent',
+      source: 'auto'
+    }).select('_id').lean();
+    if (!stale.length) continue;
+    if (!apply) {
+      removedDays += stale.length;
+      continue;
+    }
+    await AttendanceDay.deleteMany({ _id: { $in: stale.map((row) => row._id) } });
+    removedDays += stale.length;
+    const cleared = await Warning.updateMany(
+      { user: user._id, status: 'active', dateKey: { $lt: joinKey } },
+      {
+        $set: {
+          status: 'cleared',
+          clearedAt: new Date(),
+          clearedByName: 'النظام',
+          clearReason: 'غياب محسوب قبل انضمام العضو للموقع'
+        }
+      }
+    );
+    clearedWarnings += cleared.modifiedCount || 0;
+    const remaining = await Warning.countDocuments({ user: user._id, status: 'active' });
+    if (!remaining) await stripRoles(user, c).catch(() => null);
+    touched.push({ name: displayName(user), days: stale.length, joinKey });
+  }
+
+  console.log(
+    `[Attendance] إصلاح ما قبل الانضمام: ${touched.length} عضوًا — حذف ${removedDays} يوم غياب — رفع ${clearedWarnings} إنذار`
+  );
+  return { users: users.length, touched, removedDays, clearedWarnings, applied: apply };
+}
+
 module.exports = {
+  repairPreJoin,
   cfg,
   ensureStarted,
   dateKeyNow,

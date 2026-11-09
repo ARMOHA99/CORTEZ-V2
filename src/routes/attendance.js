@@ -103,6 +103,25 @@ router.post(
   })
 );
 
+/* إصلاح: حذف الغيابات المحسوبة قبل انضمام العضو للموقع */
+router.post(
+  '/repair-prejoin',
+  requireAuth,
+  requirePermission('attendance:manage'),
+  asyncHandler(async (req, res) => {
+    if (!dbReady()) throw httpError(503, 'قاعدة البيانات غير متصلة', 'DB_OFFLINE');
+    const apply = (req.body || {}).apply !== false;
+    const result = await attendance.repairPreJoin({ apply });
+    await audit.log({
+      actor: req.user,
+      action: 'attendance.repair-prejoin',
+      description: `إصلاح غيابات قبل الانضمام (${result.removedDays} يوم، ${result.clearedWarnings} إنذار)`,
+      req
+    }).catch(() => null);
+    res.json({ ok: true, ...result });
+  })
+);
+
 /* رفع إنذار بيد الإدارة */
 router.post(
   '/warnings/:id/clear',

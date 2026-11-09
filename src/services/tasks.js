@@ -99,6 +99,14 @@ function startTasks() {
   setTimeout(() => {
     require('./leaderboard').build({ limit: 10 }).catch(() => null);
   }, 130 * 1000);
+  setTimeout(async () => {
+    try {
+      const out = await require('./attendance').repairPreJoin({ apply: true });
+      if (out.removedDays) console.log('[Tasks] إصلاح غيابات ما قبل الانضمام:', JSON.stringify(out.touched));
+    } catch (error) {
+      console.error('[Tasks] repair-prejoin:', error.message);
+    }
+  }, 25 * 1000);
   setTimeout(tickGoal, 4000);
   setTimeout(tickVotes, 8000);
   setTimeout(tickPresence, 12000);
