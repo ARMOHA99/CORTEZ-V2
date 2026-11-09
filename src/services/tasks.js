@@ -53,6 +53,14 @@ async function tickSync() {
   }
 }
 
+async function tickImport() {
+  try {
+    await syncService.importGuildMembers();
+  } catch (error) {
+    console.error('[Tasks] import:', error.message);
+  }
+}
+
 async function tickSyncAll() {
   try {
     const out = await syncService.syncAllUsers();
@@ -91,11 +99,13 @@ function startTasks() {
   timers.push(setInterval(tickPresence, 60 * 1000));
   timers.push(setInterval(tickSync, 120 * 1000));
   timers.push(setInterval(tickSyncAll, 30 * 60 * 1000));
+  timers.push(setInterval(tickImport, 6 * 60 * 60 * 1000));
   timers.push(setInterval(tickAttendance, 5 * 60 * 1000));
   timers.push(setInterval(tickDutyWindow, 60 * 1000));
   setTimeout(tickDutyWindow, 20 * 1000);
   setTimeout(tickAttendance, 45 * 1000);
   setTimeout(tickSyncAll, 90 * 1000);
+  setTimeout(tickImport, 60 * 1000);
   setTimeout(tickGoal, 4000);
   setTimeout(tickVotes, 8000);
   setTimeout(tickPresence, 12000);

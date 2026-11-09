@@ -14,8 +14,6 @@ async function resolveRank(user, member) {
   return mapped ? mapped.key : null;
 }
 
-let nameDebugLeft = 0;
-
 async function syncUser(user, options = {}) {
   const { emit = true } = options;
   if (!mongooseReady()) return { skipped: true, reason: 'db' };
@@ -113,13 +111,6 @@ async function syncUser(user, options = {}) {
     update.sessionInvalid = false;
   }
 
-  if (nameDebugLeft > 0) {
-    nameDebugLeft -= 1;
-    console.log(
-      `[Sync][اسم] ${user.discordId} — nick=${JSON.stringify(member.nick)} global=${JSON.stringify(member.user.globalName)} user=${JSON.stringify(member.user.username)} → ${JSON.stringify(update.displayName)}`
-    );
-  }
-
   await User.updateOne({ _id: user._id }, { $set: update });
 
   if (emit && (rankChanged || update.displayName !== user.displayName)) {
@@ -170,7 +161,6 @@ async function syncAllUsers({ delayMs = 150 } = {}) {
   if (syncingAll) return { running: true };
   if (!mongooseReady() || !discordService.hasBot() || !config.discord.guildId) return { skipped: true };
   syncingAll = true;
-  nameDebugLeft = 5;
   const result = { total: 0, renamed: 0, rankChanged: 0, failed: 0 };
   try {
     const User = require('../models/User');
@@ -196,4 +186,74 @@ async function syncAllUsers({ delayMs = 150 } = {}) {
   return result;
 }
 
-module.exports = { syncUser, syncOnlineUsers, syncAllUsers, resolveRank };
+/* يستورد كل أعضاء سيرفر ديسكورد إلى الموقع (من لم يسجّل دخول بعد) حتى تظهر أسماؤهم */
+async function importGuildMembers({ max = 2000 } = {}) {
+  if (!mongooseReady() || !discordService.hasBot() || !config.discord.guildId) {
+    return { skipped: true, created: 0, updated: 0, total: 0 };
+  }
+  const User = require('../models/User');
+  let members;
+  try {
+    members = await discordService.listGuildMembers({ max });
+  } catch (error) {
+    console.error('[Sync] import fetch:', error.message);
+    return { failed: true, created: 0, updated: 0, total: 0, error: error.message };
+  }
+
+  const result = { created: 0, updated: 0, total: members.length, failed: 0 };
+  const requireRole = (await require('./settings').get('access.requireDiscordRole', true)) !== false;
+
+  for (const member of members) {
+    const discordId = member.user && member.user.id;
+    if (!discordId || member.user.bot) continue;
+    try {
+      const displayName = member.nick || member.user.globalName || member.user.username || 'عضو';
+      const existing = await User.findOne({ discordId: String(discordId) });
+      const mapped = await resolveRank({ discordId: String(discordId) }, member);
+
+      if (!existing) {
+        await User.create({
+          discordId: String(discordId),
+          username: member.user.username || '',
+          globalName: member.user.globalName || '',
+          nick: member.nick || '',
+          displayName,
+          avatar: member.user.avatar || '',
+          discriminator: member.user.discriminator || '0',
+          roles: member.roles || [],
+          rank: mapped || 'guest',
+          rankAssignedAt: new Date(),
+          inGuild: true,
+          joinedGuildAt: member.joinedAt || new Date(),
+          sessionInvalid: requireRole && !mapped
+        });
+        result.created += 1;
+      } else {
+        const update = {
+          username: member.user.username || existing.username || '',
+          globalName: member.user.globalName || '',
+          nick: member.nick || '',
+          displayName,
+          avatar: member.user.avatar || '',
+          roles: member.roles || [],
+          inGuild: true
+        };
+        if (mapped && mapped !== existing.rank) {
+          update.rank = mapped;
+          update.rankAssignedAt = new Date();
+        }
+        await User.updateOne({ _id: existing._id }, { $set: update });
+        result.updated += 1;
+      }
+    } catch (error) {
+      result.failed += 1;
+    }
+  }
+
+  console.log(
+    `[Sync] استيراد أعضاء ديسكورد: ${result.total} عضو — جديد ${result.created} — محدّث ${result.updated} — فشل ${result.failed}`
+  );
+  return result;
+}
+
+module.exports = { syncUser, syncOnlineUsers, syncAllUsers, resolveRank, importGuildMembers };

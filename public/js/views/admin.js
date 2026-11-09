@@ -517,8 +517,13 @@ async function tabSettings(box) {
   });
   box.querySelector('#bot-sync-all').addEventListener('click', async () => {
     try {
-      await post('/api/admin/sync-members');
-      toast('بدأت مزامنة كل الأعضاء (الأسماء من سيرفرنا + الرتب). ستظهر النتائج خلال لحظات.', 'success');
+      const res = await post('/api/admin/sync-members');
+      const imp = (res && res.imported) || {};
+      const msg = imp.created !== undefined
+        ? `تم استيراد ${imp.created} عضو جديد وتحديث ${imp.updated || 0} من أصل ${imp.total || 0} عضو في ديسكورد`
+        : 'بدأت مزامنة كل الأعضاء (الأسماء من سيرفرنا + الرتب). ستظهر النتائج خلال لحظات.';
+      toast(msg, 'success');
+      setTimeout(() => location.reload(), 1800);
     } catch (e) { toast(e.message, 'danger'); }
   });
   box.querySelector('#bot-sync-check').addEventListener('click', async () => {

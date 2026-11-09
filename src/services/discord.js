@@ -201,6 +201,33 @@ function normalizeMember(member) {
   };
 }
 
+/* جلب كامل أعضاء السيرفر (للتعريفات والأسماء) — ١٠٠٠ عضو في كل طلب */
+async function listGuildMembers({ max = 2000 } = {}) {
+  if (!config.discord.guildId) return [];
+  const guild = isReady() ? client.guilds.cache.get(config.discord.guildId) : null;
+  if (guild) {
+    try {
+      const fetched = await guild.members.fetch({ limit: 0, time: 60000 });
+      return Array.from(fetched.values()).map(normalizeMember).filter(Boolean).slice(0, max);
+    } catch (error) {
+      console.error('[Discord] fetch all members:', error.message);
+    }
+  }
+  const all = [];
+  let after = '0';
+  while (all.length < max) {
+    const page = await rest(`/guilds/${config.discord.guildId}/members?limit=1000&after=${after}`);
+    if (!Array.isArray(page) || !page.length) break;
+    for (const raw of page) {
+      const normalized = normalizeMember(raw);
+      if (normalized) all.push(normalized);
+    }
+    after = page[page.length - 1].user.id;
+    if (page.length < 1000) break;
+  }
+  return all.slice(0, max);
+}
+
 async function getGuildMember(discordId) {
   if (!config.discord.guildId) return null;
   if (isReady()) {
@@ -552,6 +579,7 @@ module.exports = {
   fetchOAuthUser,
   fetchOAuthGuilds,
   getGuildMember,
+  listGuildMembers,
   assignRole,
   removeRole,
   syncRankRole,
