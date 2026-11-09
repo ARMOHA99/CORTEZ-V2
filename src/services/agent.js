@@ -16,7 +16,7 @@ const DEFAULTS = {
   required: false,
   host: '185.239.175.27',
   port: 30120,
-  version: '1.3.0',
+  version: '1.4.0',
   downloadUrl: '/download/CortezAgent.exe',
   intervalSeconds: 30,
   autoDuty: true,
@@ -233,6 +233,9 @@ async function heartbeat({ token, connected = false, verified = false, version =
   if (!device || device.revokedAt) throw httpError(401, 'الجهاز غير مرتبط. اطلب رمز ربط جديدًا من الموقع.', 'DEVICE_REVOKED');
 
   device.lastSeenAt = new Date();
+  console.log(
+    `[Agent] نبضة ${device.label || 'جهاز'} v${version || '?'} connected=${connected} verified=${verified} — ${String(diag || '').slice(0, 180)}`
+  );
   const wasDuty = Boolean(device.duty);
   /* لا نفتح دوامًا إلا إذا تحقق التطبيق أن اللعبة متصلة فعلاً بالسيرفر.
      النسخ القديمة (قبل 1.2.0) لا ترسل verified فلا تُحسب. */
